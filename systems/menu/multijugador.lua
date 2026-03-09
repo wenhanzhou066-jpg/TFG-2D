@@ -5,10 +5,10 @@ local Base = require("systems.menu.base")
 local Multijugador = {}
 local opcion = 1
 local items = {
-    { "1 vs 1",         "1 vs 1"       },
-    { "Equipos 2v2",    "Teams 2v2"    },
-    { "Todos vs Todos", "Free for All" },
-    { "Volver",         "Back", "back" },
+    { "1 vs 1","1 vs 1"},
+    { "Equipos 2v2","Teams 2v2"},
+    { "Todos vs Todos", "Free for All"},
+    { "Volver","Back", "back"},
 }
 
 function Multijugador.load(escena)  opcion = 1 end

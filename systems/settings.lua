@@ -33,8 +33,8 @@ function Settings.cargar()
     local idi = contenido:match('"idioma":"(%a+)"')
     local pan = contenido:match('"pantallaCompleta":(%a+)')
 
-    if vol then Settings.volumen          = tonumber(vol) end
-    if idi then Settings.idioma           = idi end
+    if vol then Settings.volumen = tonumber(vol) end
+    if idi then Settings.idioma = idi end
     if pan then Settings.pantallaCompleta = (pan == "true") end
 end
 

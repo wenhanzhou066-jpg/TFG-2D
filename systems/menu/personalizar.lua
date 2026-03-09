@@ -2,10 +2,10 @@ local Base = require("systems.menu.base")
 local Personalizar = {}
 local opcion = 1
 local items = {
-    { "Tanque",  "Tank"          },
-    { "Color",   "Color"         },
-    { "Emblema", "Emblem"        },
-    { "Volver",  "Back", "back"  },
+    { "Tanque","Tank"},
+    { "Color","Color"},
+    { "Emblema","Emblem"},
+    { "Volver","Back","back"},
 }
 
 function Personalizar.load(escena)  opcion = 1 end

@@ -7,12 +7,12 @@ UI.GAME_TITLE = "OPERATION: BLACK STEEL"
 --Colores
 -- Usamos una tabla de colores 
 UI.colors = {
-    cream    = {0.95, 0.90, 0.75, 1.0},   -- texto seleccionado
+    cream = {0.95, 0.90, 0.75, 1.0},   -- texto seleccionado
     creamDim = {0.65, 0.60, 0.50, 1.0},   -- texto no seleccionado
     goldDark = {0.80, 0.65, 0.20, 1.0},   -- subtitulo dorado
-    khaki    = {0.70, 0.65, 0.45, 1.0},   -- texto descriptivo
-    black    = {0.00, 0.00, 0.00, 1.0},
-    white    = {1.00, 1.00, 1.00, 1.0},
+    khaki = {0.70, 0.65, 0.45, 1.0},   -- texto descriptivo
+    black = {0.00, 0.00, 0.00, 1.0},
+    white = {1.00, 1.00, 1.00, 1.0},
 }
 
 --Fuentes
@@ -21,9 +21,9 @@ local fuentes = {}
 -- Carga las fuentes segun el tamaño de pantalla actual.
 function UI.loadFonts()
     local H = love.graphics.getHeight()
-    fuentes.title  = love.graphics.newFont(math.floor(H * 0.07))
+    fuentes.title = love.graphics.newFont(math.floor(H * 0.07))
     fuentes.button = love.graphics.newFont(math.floor(H * 0.04))
-    fuentes.small  = love.graphics.newFont(math.floor(H * 0.025))
+    fuentes.small = love.graphics.newFont(math.floor(H * 0.025))
 end
 
 -- Devuelve la fuente por nombre
@@ -43,7 +43,7 @@ function UI.drawParallax(fondos, tiempo)
         local offset = (tiempo * velocidad) % fw
 
         love.graphics.setColor(1, 1, 1)
-        love.graphics.draw(fondo, -offset,    0, 0, W / fw, H / fondo:getHeight())
+        love.graphics.draw(fondo, -offset,0, 0, W / fw, H / fondo:getHeight())
         love.graphics.draw(fondo, fw - offset, 0, 0, W / fw, H / fondo:getHeight())
     end
 end
@@ -98,7 +98,7 @@ function UI.button(img, x, y, w, h, texto, sel, tiempo)
 
     if texto and texto ~= "" then
         love.graphics.setFont(UI.font("button"))
-        local f  = UI.font("button")
+        local f = UI.font("button")
         local tw = f:getWidth(texto)
         local th = f:getHeight()
         local col = sel and UI.colors.cream or UI.colors.creamDim
@@ -117,8 +117,8 @@ function UI.text(texto, x, y, color)
 end
 
 function UI.textCentered(texto, y, color)
-    local W  = love.graphics.getWidth()
-    local f  = love.graphics.getFont()
+    local W = love.graphics.getWidth()
+    local f = love.graphics.getFont()
     local tw = f:getWidth(texto)
     UI.text(texto, W/2 - tw/2, y, color)
 end

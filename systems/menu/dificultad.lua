@@ -4,10 +4,10 @@ local Base = require("systems.menu.base")
 local Dificultad = {}
 local opcion = 1
 local items = {
-    { "Facil",   "Easy"          },
-    { "Normal",  "Normal"        },
-    { "Dificil", "Hard"          },
-    { "Volver",  "Back", "back"  },
+    { "Facil","Easy"},
+    { "Normal","Normal"},
+    { "Dificil", "Hard"},
+    { "Volver","Back", "back"},
 }
 
 function Dificultad.load(escena)  opcion = 1 end

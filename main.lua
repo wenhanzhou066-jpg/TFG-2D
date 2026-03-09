@@ -11,10 +11,10 @@ function love.load()
 
     -- Forzar pantalla completa usando la resolucion del monitor
     love.window.setMode(screenWidth, screenHeight, {
-        fullscreen     = true,     -- activar fullscreen
+        fullscreen = true,     -- activar fullscreen
         fullscreentype = "desktop",-- usar modo escritorio el cual no cambia la resolucion real 
-        resizable      = false,    -- impedir que la ventana cambie de tamaño
-        vsync          = 1         -- sincronizar con los FPS del monitor
+        resizable = false,    -- impedir que la ventana cambie de tamaño
+        vsync = 1         -- sincronizar con los FPS del monitor
     })
 
     -- Cargar el menu principal

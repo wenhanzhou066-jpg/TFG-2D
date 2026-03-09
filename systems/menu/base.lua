@@ -6,21 +6,21 @@ local UI       = require("systems.ui")
 
 local T = {
     ES = {
-        principal    = "MENU PRINCIPAL",
-        jugar        = "JUGAR",
+        principal = "MENU PRINCIPAL",
+        jugar = "JUGAR",
         multijugador = "MULTIJUGADOR",
-        dificultad   = "DIFICULTAD",
+        dificultad = "DIFICULTAD",
         personalizar = "PERSONALIZAR",
-        ranking      = "RANKING",
+        ranking = "RANKING",
         configuracion= "CONFIGURACION",
     },
     EN = {
-        principal    = "MAIN MENU",
-        jugar        = "PLAY",
+        principal = "MAIN MENU",
+        jugar = "PLAY",
         multijugador = "MULTIPLAYER",
-        dificultad   = "DIFFICULTY",
+        dificultad = "DIFFICULTY",
         personalizar = "CUSTOMIZE",
-        ranking      = "RANKING",
+        ranking = "RANKING",
         configuracion= "SETTINGS",
     },
 }

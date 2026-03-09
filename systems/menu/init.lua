@@ -3,16 +3,16 @@
 
 
 local Settings = require("systems.settings")
-local UI       = require("systems.ui")
+local UI = require("systems.ui")
 
 -- Cargamos cada pantalla como un modulo independiente
 local pantallas = {
-    principal    = require("systems.menu.principal"),
-    jugar        = require("systems.menu.jugar"),
+    principal = require("systems.menu.principal"),
+    jugar = require("systems.menu.jugar"),
     multijugador = require("systems.menu.multijugador"),
-    dificultad   = require("systems.menu.dificultad"),
+    dificultad = require("systems.menu.dificultad"),
     personalizar = require("systems.menu.personalizar"),
-    ranking      = require("systems.menu.ranking"),
+    ranking = require("systems.menu.ranking"),
     configuracion= require("systems.menu.configuracion"),
 }
 
@@ -20,10 +20,10 @@ local Menu = {}
 
 -- Estado compartido entre todas las pantallas.
 -- Lo pasamos a cada pantalla para que puedan navegar y comunicarse.
-local estado    = "principal"
+local estado = "principal"
 local historial = {}
-local action    = nil
-local tiempo    = 0
+local action = nil
+local tiempo = 0
 local musica, botonImg, tituloImg, fondos
 
 local function navegarA(nuevoEstado)
@@ -41,22 +41,22 @@ end
 
 -- Escena que pasamos a cada pantalla en su load/update/draw.
 local escena = {
-    navegarA  = navegarA,
-    volver    = volver,
+    navegarA = navegarA,
+    volver = volver,
     setAction = setAction,
     getMusica = function() return musica end,
     getTiempo = function() return tiempo end,
-    botonImg  = function() return botonImg end,
+    botonImg = function() return botonImg end,
     tituloImg = function() return tituloImg end,
-    fondos    = function() return fondos end,
+    fondos = function() return fondos end,
 }
 
 
 function Menu.load()
-    action   = nil
-    estado   = "principal"
+    action = nil
+    estado = "principal"
     historial= {}
-    tiempo   = 0
+    tiempo = 0
 
     UI.loadFonts()
     Settings.cargar()
@@ -66,7 +66,7 @@ function Menu.load()
     musica:setVolume(Settings.volumen)
     love.audio.play(musica)
 
-    botonImg  = love.graphics.newImage("assets/menu/ui_concrete.png")
+    botonImg = love.graphics.newImage("assets/menu/ui_concrete.png")
     tituloImg = love.graphics.newImage("assets/menu/titulopanel.png")
     fondos = {
         love.graphics.newImage("assets/menu/parallax-mountain-bg.png"),

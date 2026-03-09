@@ -5,10 +5,10 @@ local Base = require("systems.menu.base")
 local Ranking = {}
 local opcion = 1
 local items = {
-    { "Global", "Global"        },
-    { "Amigos", "Friends"       },
-    { "Local",  "Local"         },
-    { "Volver", "Back", "back"  },
+    { "Global", "Global"},
+    { "Amigos", "Friends"},
+    { "Local",  "Local"},
+    { "Volver", "Back", "back"},
 }
 
 function Ranking.load(escena)  opcion = 1 end

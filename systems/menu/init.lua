@@ -7,12 +7,13 @@ local UI = require("systems.ui")
 
 -- Cargamos cada pantalla como un modulo independiente
 local pantallas = {
-    principal = require("systems.menu.principal"),
-    jugar = require("systems.menu.jugar"),
+    principal    = require("systems.menu.principal"),
+    jugar        = require("systems.menu.jugar"),
+    mapas        = require("systems.menu.mapas"),
     multijugador = require("systems.menu.multijugador"),
-    dificultad = require("systems.menu.dificultad"),
+    dificultad   = require("systems.menu.dificultad"),
     personalizar = require("systems.menu.personalizar"),
-    ranking = require("systems.menu.ranking"),
+    ranking      = require("systems.menu.ranking"),
     configuracion= require("systems.menu.configuracion"),
 }
 
@@ -108,8 +109,9 @@ function Menu.mousepressed(mx, my, btn)
     if p and p.mousepressed then p.mousepressed(mx, my, btn, escena) end
 end
 
-function Menu.resize()    UI.loadFonts() end
-function Menu.getAction() return action end
-function Menu.stopMusic() if musica then musica:stop() end end
+function Menu.resize()      UI.loadFonts() end
+function Menu.getAction()   return action end
+function Menu.clearAction() action = nil end
+function Menu.stopMusic()   if musica then musica:stop() end end
 
 return Menu

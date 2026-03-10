@@ -19,6 +19,7 @@ end
 
 function Bullet.spawn(x, y, angle, type)
     type = type or "light"
+    if Audio then Audio.playShot() end
     table.insert(active, {
         x     = x,
         y     = y,
@@ -40,9 +41,11 @@ function Bullet.update(dt)
         -- Impacto en muro o edificio destruible
         if Map.bulletHit(b.x, b.y) then
             Effects.spawnExplosion(b.x, b.y)
+            if Audio then Audio.playExplosion() end
             table.remove(active, i)
         elseif b.life <= 0 then
             Effects.spawnExplosion(b.x, b.y)
+            if Audio then Audio.playExplosion() end
             table.remove(active, i)
         end
     end

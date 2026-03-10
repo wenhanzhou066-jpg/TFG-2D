@@ -114,6 +114,9 @@ function Tank.update(dt)
     local mx, my = love.mouse.getPosition()
     data.turretAngle = math.atan2(my - data.y, mx - data.x)
 
+    -- Sonido de motor
+    if Audio then Audio.updateEngine(data.isMoving) end
+
     -- Huellas de oruga
     if data.isMoving then
         data.trackTimer = data.trackTimer + dt

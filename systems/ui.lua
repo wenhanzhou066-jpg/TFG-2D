@@ -17,13 +17,15 @@ UI.colors = {
 
 --Fuentes
 local fuentes = {}
+local fontPath = "assets/menu/Military Poster.ttf"
 
 -- Carga las fuentes segun el tamaño de pantalla actual.
 function UI.loadFonts()
     local H = love.graphics.getHeight()
-    fuentes.title = love.graphics.newFont(math.floor(H * 0.07))
-    fuentes.button = love.graphics.newFont(math.floor(H * 0.04))
-    fuentes.small = love.graphics.newFont(math.floor(H * 0.025))
+
+    fuentes.title  = love.graphics.newFont(fontPath, math.floor(H * 0.07))
+    fuentes.button = love.graphics.newFont(fontPath, math.floor(H * 0.04))
+    fuentes.small  = love.graphics.newFont(fontPath, math.floor(H * 0.025))
 end
 
 -- Devuelve la fuente por nombre

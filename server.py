@@ -1,37 +1,37 @@
 """
-Simple UDP Game Server for Tank Game
-Receives player positions and broadcasts to all connected clients
+Servidor de juego UDP simple para Tank Game
+Recibe posiciones de jugadores y retransmite a todos los clientes conectados
 """
 import socket
 import json
 import time
 from datetime import datetime
 
-HOST = '0.0.0.0'  # Listen on all interfaces
-PORT = 12345      # Game server port
+HOST = '0.0.0.0'  # Escucha en todas las interfaces
+PORT = 12345      # Puerto del servidor de juego
 
 class GameServer:
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind((HOST, PORT))
-        self.clients = {}  # {address: {'id': player_id, 'last_seen': timestamp}}
-        self.game_state = {}  # {player_id: {'x': x, 'y': y, 'angle': angle}}
+        self.clients = {}  # {direccion: {'id': id_jugador, 'last_seen': timestamp}}
+        self.game_state = {}  # {id_jugador: {'x': x, 'y': y, 'angle': angulo}}
         self.next_player_id = 1
 
     def run(self):
-        print(f"[SERVER] Started on {HOST}:{PORT}")
-        print("[SERVER] Waiting for players...")
+        print(f"[SERVIDOR] Iniciado en {HOST}:{PORT}")
+        print("[SERVIDOR] Esperando jugadores...")
 
         while True:
             try:
                 data, addr = self.sock.recvfrom(1024)
                 self.handle_message(data, addr)
             except ConnectionResetError:
-                # Windows UDP quirk: ignore "connection reset" errors
-                # These occur when a client disconnects abruptly
+                # Peculiaridad UDP en Windows: ignorar errores de "conexión reiniciada"
+                # Ocurren cuando un cliente se desconecta de forma abrupta
                 pass
             except Exception as e:
-                # Only print unexpected errors
+                # Solo mostrar errores inesperados
                 if "10054" not in str(e):
                     print(f"[ERROR] {e}")
 
@@ -50,7 +50,7 @@ class GameServer:
                 self.handle_disconnect(addr)
 
         except json.JSONDecodeError:
-            print(f"[WARN] Invalid JSON from {addr}")
+            print(f"[ADVERTENCIA] JSON inválido de {addr}")
 
     def handle_connect(self, addr):
         if addr not in self.clients:
@@ -62,9 +62,9 @@ class GameServer:
             }
             self.game_state[player_id] = {'x': 960, 'y': 540, 'angle': 0}
 
-            print(f"[CONNECT] Player {player_id} joined from {addr}")
+            print(f"[CONECTADO] Jugador {player_id} se unió desde {addr}")
 
-            # Send welcome message with assigned ID
+            # Enviar mensaje de bienvenida con el ID asignado
             response = json.dumps({
                 'type': 'welcome',
                 'player_id': player_id
@@ -76,26 +76,26 @@ class GameServer:
             player_id = self.clients[addr]['id']
             self.clients[addr]['last_seen'] = time.time()
 
-            # Update game state
+            # Actualizar estado del juego
             self.game_state[player_id] = {
                 'x': msg.get('x', 0),
                 'y': msg.get('y', 0),
                 'angle': msg.get('angle', 0)
             }
 
-            # Broadcast game state to all clients
+            # Difundir estado del juego a todos los clientes
             self.broadcast_state()
 
     def handle_disconnect(self, addr):
         if addr in self.clients:
             player_id = self.clients[addr]['id']
-            print(f"[DISCONNECT] Player {player_id} left")
+            print(f"[DESCONECTADO] Jugador {player_id} salió")
             del self.clients[addr]
             if player_id in self.game_state:
                 del self.game_state[player_id]
 
     def broadcast_state(self):
-        """Send current game state to all connected clients"""
+        """Enviar estado actual del juego a todos los clientes conectados"""
         state_msg = json.dumps({
             'type': 'state',
             'players': self.game_state
@@ -108,7 +108,7 @@ class GameServer:
                 pass
 
     def cleanup_stale_clients(self):
-        """Remove clients that haven't sent data in 10 seconds"""
+        """Eliminar clientes que no han enviado datos en 10 segundos"""
         current_time = time.time()
         stale_addrs = []
 
@@ -124,4 +124,4 @@ if __name__ == '__main__':
     try:
         server.run()
     except KeyboardInterrupt:
-        print("\n[SERVER] Shutting down...")
+        print("\n[SERVIDOR] Cerrando...")

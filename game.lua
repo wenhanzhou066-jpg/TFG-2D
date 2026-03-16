@@ -69,7 +69,7 @@ end
 function Game.mousepressed(x, y, button)
     if button == 1 then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle)
+        Bullet.spawn(bx, by, angle, "plasma")  -- o "light"/"heavy"
     end
 end
 

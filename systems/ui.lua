@@ -35,18 +35,24 @@ end
 
 --Fondo parallax
 -- Dibuja las capas del fondo
+-- Solución popping: ahora el offset se calcula usando el ancho REAL renderizado
+-- (ancho original * escala).
 function UI.drawParallax(fondos, tiempo)
     local W = love.graphics.getWidth()
     local H = love.graphics.getHeight()
 
     for i, fondo in ipairs(fondos) do
         local velocidad = i * 15
-        local fw = fondo:getWidth()
-        local offset = (tiempo * velocidad) % fw
 
-        love.graphics.setColor(1, 1, 1)
-        love.graphics.draw(fondo, -offset,0, 0, W / fw, H / fondo:getHeight())
-        love.graphics.draw(fondo, fw - offset, 0, 0, W / fw, H / fondo:getHeight())
+        local fw = fondo:getWidth()
+        local scale = W / fw
+        local drawW = fw * scale
+
+        local offset = (tiempo * velocidad) % drawW
+
+        love.graphics.setColor(1,1,1)
+        love.graphics.draw(fondo, -offset, 0, 0, scale, H / fondo:getHeight())
+        love.graphics.draw(fondo, drawW - offset, 0, 0, scale, H / fondo:getHeight())
     end
 end
 

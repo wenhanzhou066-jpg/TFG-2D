@@ -1,0 +1,42 @@
+# Archivos del servidor (ejecutándose en Webdock)
+server.lua
+servidor.lua
+server_rooms.lua
+servidor_salas.lua
+tank-server.service
+
+# Archivos de prueba
+test_*.lua
+test_*.py
+test_*.bat
+*_test.lua
+*_test.bat
+run_socket_test.bat
+run_server.bat
+test_webdock.bat
+
+# Copias de seguridad y archivos temporales
+main_original.lua
+myMain.lua
+*_backup.lua
+
+# Entorno Python (no necesario para Lua)
+ml_env/
+requirements.txt
+*.py
+__pycache__/
+
+# Documentación (opcional - puedes commitear estos si quieres)
+NETWORK_TEST.md
+WEBDOCK_DEPLOYMENT.md
+DEPLOY_QUICK_START.md
+MULTIPLAYER_INTEGRATION.md
+MULTI_ROOM_SETUP.md
+MULTIPLAYER_VERIFICATION.md
+
+# Scripts batch (específicos de Windows)
+run_game.bat
+start_server.bat
+
+# Verificador de dependencias Lua
+check_dependencies.lua

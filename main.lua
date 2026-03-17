@@ -1,10 +1,11 @@
 -- Punto de entrada del juego.
--- Gestiona dos escenas: "menu" y "juego".
+-- Gestiona tres escenas: "menu", "juego" y "multiplayer".
 
 local Menu = require("systems.menu.init")
 local Game = require("game")
+local GameMultiplayer = require("game_multiplayer")
 
-local escena = "menu"   -- "menu" o "juego"
+local escena = "menu"   -- "menu", "juego", o "multiplayer"
 
 -- Arranca la partida con el mapa elegido y para la musica del menu
 local function startGame(mapIdx)
@@ -13,9 +14,20 @@ local function startGame(mapIdx)
     escena = "juego"
 end
 
+-- Arranca partida multijugador
+local function startMultiplayer(mapIdx)
+    Menu.stopMusic()
+    GameMultiplayer.load(mapIdx or 1)
+    escena = "multiplayer"
+end
+
 -- Vuelve al menu principal y reinicia musica
 local function goMenu()
-    Game.stopAudio()
+    if escena == "juego" then
+        Game.stopAudio()
+    elseif escena == "multiplayer" then
+        GameMultiplayer.stopAudio()
+    end
     escena = "menu"
     Menu.load()
 end
@@ -42,11 +54,15 @@ function love.update(dt)
             if     action == "play_map_1" then startGame(1)
             elseif action == "play_map_2" then startGame(2)
             elseif action == "play_map_3" then startGame(3)
+            elseif action == "play_multiplayer" then startMultiplayer(1)
             end
         end
 
     elseif escena == "juego" then
         Game.update(dt)
+
+    elseif escena == "multiplayer" then
+        GameMultiplayer.update(dt)
     end
 end
 
@@ -55,6 +71,8 @@ function love.draw()
         Menu.draw()
     elseif escena == "juego" then
         Game.draw()
+    elseif escena == "multiplayer" then
+        GameMultiplayer.draw()
     end
 end
 
@@ -63,6 +81,8 @@ function love.keypressed(key)
         Menu.keypressed(key)
     elseif escena == "juego" then
         Game.keypressed(key, goMenu)
+    elseif escena == "multiplayer" then
+        GameMultiplayer.keypressed(key, goMenu)
     end
 end
 
@@ -77,6 +97,8 @@ function love.mousepressed(x, y, button)
         Menu.mousepressed(x, y, button)
     elseif escena == "juego" then
         Game.mousepressed(x, y, button)
+    elseif escena == "multiplayer" then
+        GameMultiplayer.mousepressed(x, y, button)
     end
 end
 

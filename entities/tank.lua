@@ -217,5 +217,14 @@ function tanque.getMuzzlePos()
     return bx, by, datos.anguloTorreta
 end
 
+-- OBTENER POSICION DEL TANQUE (para multiplayer)
+function tanque.getPosition()
+    return datos.x, datos.y, datos.angulo
+end
+
+-- OBTENER ANGULOS (para multiplayer)
+function tanque.getAngles()
+    return datos.angulo, datos.anguloTorreta
+end
 
 return tanque

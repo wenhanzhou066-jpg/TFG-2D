@@ -5,7 +5,7 @@ local Base = require("systems.menu.base")
 local Multijugador = {}
 local opcion = 1
 local items = {
-    { "1 vs 1", "1 vs 1"},
+    { "1 vs 1", "1 vs 1", ">lobby"},
     { "Equipos 2v2", "Teams 2v2"},
     { "Todos vs Todos", "Free for All"},
     { "Volver", "Back", "back"},

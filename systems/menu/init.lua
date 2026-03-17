@@ -10,6 +10,7 @@ local pantallas = {
     jugar = require("systems.menu.jugar"),
     mapas = require("systems.menu.mapas"),
     multijugador = require("systems.menu.multijugador"),
+    lobby = require("systems.menu.lobby"),
     dificultad = require("systems.menu.dificultad"),
     personalizar = require("systems.menu.personalizar"),
     ranking = require("systems.menu.ranking"),

@@ -12,7 +12,8 @@ Red.conectado = false
 Red.id_jugador = nil
 Red.id_sala = nil  -- ID de sala/lobby actual
 Red.otros_jugadores = {}  -- {id_jugador: {x, y, angulo}}
-Red.tasa_envio = 0.05  -- Enviar actualizaciones cada 50ms
+Red.balas_recibidas = {}  -- Cola de balas recibidas de otros jugadores
+Red.tasa_envio = 0.03  -- Enviar actualizaciones cada 30ms (~33 Hz) - Antes: 0.05 (20 Hz)
 Red.temporizador_envio = 0
 Red.update_llamado = false  -- Bandera de debug
 
@@ -87,6 +88,23 @@ function Red.enviar_actualizacion(x, y, angulo)
     local enviado, err = Red.udp:send(msg)
     if not enviado and err then
         print("[AVISO] Error de envío: " .. err)
+    end
+end
+
+function Red.enviar_bala(x, y, angulo, tipo_bala)
+    if not Red.conectado then return end
+
+    local msg = json.encode({
+        type = "bullet",
+        x = x,
+        y = y,
+        angle = angulo,
+        bullet_type = tipo_bala or "plasma"
+    })
+
+    local enviado, err = Red.udp:send(msg)
+    if not enviado and err then
+        print("[AVISO] Error de envío de bala: " .. err)
     end
 end
 
@@ -173,6 +191,19 @@ function Red.manejar_mensaje(msg)
                 }
             end
         end
+
+    elseif tipo_msg == "bullet" then
+        -- Bala disparada por otro jugador
+        if msg.player_id ~= Red.id_jugador then
+            table.insert(Red.balas_recibidas, {
+                x = msg.x,
+                y = msg.y,
+                angulo = msg.angle,
+                tipo = msg.bullet_type or "plasma"
+            })
+            print("[CLIENTE] Bala recibida de jugador " .. msg.player_id)
+        end
+
     else
         print("[CLIENTE] Tipo de mensaje desconocido: " .. tostring(tipo_msg))
     end
@@ -180,6 +211,12 @@ end
 
 function Red.obtener_otros_jugadores()
     return Red.otros_jugadores
+end
+
+function Red.obtener_balas_recibidas()
+    local balas = Red.balas_recibidas
+    Red.balas_recibidas = {}  -- Limpiar cola
+    return balas
 end
 
 function Red.esta_conectado()

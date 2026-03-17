@@ -21,8 +21,11 @@ Tracks = require("systems.tracks")
 Audio = require("systems.audio")
 
 -- Estado multijugador
-local otherTanks = {} -- {player_id: {x, y, angle, turretAngle}}
+local otherTanks = {} -- {player_id: {x, y, angulo, turretAngle, target_x, target_y, target_angulo}}
 local subsystemsLoaded = false
+
+-- Suavizado de interpolación
+local INTERP_SPEED = 10  -- Velocidad de interpolación (mayor = más rápido)
 
 -- Sprites para tanques enemigos
 local otherTankSprites = {}
@@ -66,14 +69,58 @@ function GameMultiplayer.update(dt)
 
     -- Recibir posiciones de otros jugadores
     local otherPlayers = Red.obtener_otros_jugadores()
-    otherTanks = {}
+
+    -- Actualizar posiciones objetivo de otros jugadores
     for pid, pdata in pairs(otherPlayers) do
-        otherTanks[pid] = {
-            x = pdata.x,
-            y = pdata.y,
-            angulo = pdata.angulo,
-            turretAngle = pdata.angulo -- Por ahora usar el mismo ángulo
-        }
+        if not otherTanks[pid] then
+            -- Nuevo jugador: crear con posición inicial
+            otherTanks[pid] = {
+                x = pdata.x,
+                y = pdata.y,
+                angulo = pdata.angulo,
+                turretAngle = pdata.angulo,
+                target_x = pdata.x,
+                target_y = pdata.y,
+                target_angulo = pdata.angulo
+            }
+        else
+            -- Actualizar objetivos
+            otherTanks[pid].target_x = pdata.x
+            otherTanks[pid].target_y = pdata.y
+            otherTanks[pid].target_angulo = pdata.angulo
+        end
+    end
+
+    -- Interpolar suavemente hacia las posiciones objetivo
+    for pid, tank in pairs(otherTanks) do
+        if otherPlayers[pid] then
+            -- Interpolar posición
+            tank.x = tank.x + (tank.target_x - tank.x) * INTERP_SPEED * dt
+            tank.y = tank.y + (tank.target_y - tank.y) * INTERP_SPEED * dt
+
+            -- Interpolar ángulo (tomar el camino más corto)
+            local diff = tank.target_angulo - tank.angulo
+            -- Normalizar diferencia al rango [-π, π]
+            while diff > math.pi do diff = diff - 2 * math.pi end
+            while diff < -math.pi do diff = diff + 2 * math.pi end
+            tank.angulo = tank.angulo + diff * INTERP_SPEED * dt
+
+            -- Actualizar ángulo de torreta
+            tank.turretAngle = tank.angulo
+        end
+    end
+
+    -- Eliminar jugadores desconectados
+    for pid, _ in pairs(otherTanks) do
+        if not otherPlayers[pid] then
+            otherTanks[pid] = nil
+        end
+    end
+
+    -- Recibir y crear balas de otros jugadores
+    local balas_recibidas = Red.obtener_balas_recibidas()
+    for _, bala in ipairs(balas_recibidas) do
+        Bullet.spawn(bala.x, bala.y, bala.angulo, bala.tipo)
     end
 end
 
@@ -105,7 +152,7 @@ function GameMultiplayer.drawOtherTanks()
 
         -- Tracks
         love.graphics.push()
-        love.graphics.rotate(tank.angulo)
+        love.graphics.rotate(tank.angulo + math.pi/2)
         love.graphics.setColor(1, 1, 1)
         love.graphics.draw(
             otherTankSprites.tracks,
@@ -119,7 +166,7 @@ function GameMultiplayer.drawOtherTanks()
 
         -- Hull
         love.graphics.push()
-        love.graphics.rotate(tank.angulo)
+        love.graphics.rotate(tank.angulo + math.pi/2)
         love.graphics.setColor(1, 1, 1)
         love.graphics.draw(
             otherTankSprites.hull,
@@ -133,12 +180,12 @@ function GameMultiplayer.drawOtherTanks()
 
         -- Weapon
         love.graphics.push()
-        love.graphics.rotate(tank.turretAngle)
+        love.graphics.rotate(tank.turretAngle + math.pi/2)
         love.graphics.setColor(1, 1, 1)
         love.graphics.draw(
             otherTankSprites.weapon,
-            15 * escala * math.cos(tank.turretAngle),
-            15 * escala * math.sin(tank.turretAngle),
+            15 * math.cos(tank.turretAngle),
+            15 * math.sin(tank.turretAngle),
             0,
             escala, escala,
             otherTankSprites.weapon:getWidth()/2,
@@ -182,6 +229,9 @@ function GameMultiplayer.mousepressed(x, y, button)
     if button == 1 then
         local bx, by, angle = Tank.getMuzzlePos()
         Bullet.spawn(bx, by, angle, "plasma")
+
+        -- Enviar evento de disparo a otros jugadores
+        Red.enviar_bala(bx, by, angle, "plasma")
     end
 end
 

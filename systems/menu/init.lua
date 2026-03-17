@@ -1,74 +1,89 @@
-
--- Router del menu - dependiendo de la pantalla activa o escenario hace que funcione 
-
+-- Router del menu: gestiona que pantalla esta activa y enruta los eventos
 
 local Settings = require("systems.settings")
 local UI = require("systems.ui")
+local Audio = require("systems.audio")
 
--- Cargamos cada pantalla como un modulo independiente
+-- Cargamos todas las pantallas del menu
 local pantallas = {
-    principal    = require("systems.menu.principal"),
-    jugar        = require("systems.menu.jugar"),
-    mapas        = require("systems.menu.mapas"),
+    principal = require("systems.menu.principal"),
+    jugar = require("systems.menu.jugar"),
+    mapas = require("systems.menu.mapas"),
     multijugador = require("systems.menu.multijugador"),
-    dificultad   = require("systems.menu.dificultad"),
+    dificultad = require("systems.menu.dificultad"),
     personalizar = require("systems.menu.personalizar"),
-    ranking      = require("systems.menu.ranking"),
-    configuracion= require("systems.menu.configuracion"),
+    ranking = require("systems.menu.ranking"),
+    configuracion = require("systems.menu.configuracion"),
 }
 
 local Menu = {}
 
--- Estado compartido entre todas las pantallas.
--- Lo pasamos a cada pantalla para que puedan navegar y comunicarse.
+-- Estado interno del menu
 local estado = "principal"
 local historial = {}
-local action = nil
+local accion = nil
 local tiempo = 0
-local musica, botonImg, tituloImg, fondos
+local musica, botonImg, botonExitImg, tituloImg, fondos
 
+-- Navega a una nueva pantalla guardando la anterior en el historial
 local function navegarA(nuevoEstado)
     table.insert(historial, estado)
     estado = nuevoEstado
 end
 
+-- Vuelve a la pantalla anterior del historial
 local function volver()
     estado = table.remove(historial) or "principal"
 end
 
-local function setAction(a)
-    action = a
+-- Guarda una accion pendiente para que Game.lua la lea
+local function setAccion(a)
+    accion = a
 end
 
--- Escena que pasamos a cada pantalla en su load/update/draw.
+-- Escena: objeto que pasamos a cada pantalla para que puedan comunicarse
 local escena = {
     navegarA = navegarA,
     volver = volver,
-    setAction = setAction,
+    setAction = setAccion,
     getMusica = function() return musica end,
     getTiempo = function() return tiempo end,
     botonImg = function() return botonImg end,
+    botonExitImg = function() return botonExitImg end,
     tituloImg = function() return tituloImg end,
     fondos = function() return fondos end,
 }
 
-
 function Menu.load()
-    action = nil
+    accion = nil
     estado = "principal"
-    historial= {}
+    historial = {}
     tiempo = 0
 
     UI.loadFonts()
     Settings.cargar()
+
+    if not Settings.volumenSfx then
+        Settings.volumenSfx = 0.7
+    end
+
+    Audio.cargarSonidosMenu()
 
     musica = love.audio.newSource("assets/menu/musicamilitar.mp3", "stream")
     musica:setLooping(true)
     musica:setVolume(Settings.volumen)
     love.audio.play(musica)
 
-    botonImg = love.graphics.newImage("assets/menu/ui_concrete.png")
-    tituloImg = love.graphics.newImage("assets/menu/titulopanel.png")
+    -- Sprites
+    botonImg = love.graphics.newImage("assets/menu/boton_normal.png")
+    botonExitImg = love.graphics.newImage("assets/menu/boton_salir.png")
+    tituloImg = love.graphics.newImage("assets/menu/titulo_panel.png")
+
+    -- Filtro nearest
+    botonImg:setFilter("nearest", "nearest")
+    botonExitImg:setFilter("nearest", "nearest")
+    tituloImg:setFilter("nearest", "nearest")
+
     fondos = {
         love.graphics.newImage("assets/menu/parallax-mountain-bg.png"),
         love.graphics.newImage("assets/menu/parallax-mountain-foreground-trees.png"),
@@ -77,7 +92,6 @@ function Menu.load()
         love.graphics.newImage("assets/menu/parallax-mountain-trees.png"),
     }
 
-    -- iniciamos todas las pantallas pasandoles la escena
     for _, pantalla in pairs(pantallas) do
         if pantalla.load then pantalla.load(escena) end
     end
@@ -109,9 +123,20 @@ function Menu.mousepressed(mx, my, btn)
     if p and p.mousepressed then p.mousepressed(mx, my, btn, escena) end
 end
 
-function Menu.resize()      UI.loadFonts() end
-function Menu.getAction()   return action end
-function Menu.clearAction() action = nil end
-function Menu.stopMusic()   if musica then musica:stop() end end
+function Menu.mousereleased(mx, my, btn)
+    local p = pantallas[estado]
+    if p and p.mousereleased then p.mousereleased(mx, my, btn) end
+end
+
+function Menu.resize()
+    UI.loadFonts()
+end
+
+function Menu.getAction()   return accion end
+function Menu.clearAction() accion = nil  end
+
+function Menu.stopMusic()
+    if musica then musica:stop() end
+end
 
 return Menu

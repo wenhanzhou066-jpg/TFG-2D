@@ -1,16 +1,20 @@
+-- Submenu de seleccion de dificultad
 
--- Submenu de seleccion de dificultad.
 local Base = require("systems.menu.base")
+
 local Dificultad = {}
 local opcion = 1
 local items = {
-    { "Facil","Easy"},
-    { "Normal","Normal"},
+    { "Facil", "Easy"},
+    { "Normal", "Normal"},
     { "Dificil", "Hard"},
-    { "Volver","Back", "back"},
+    { "Volver", "Back", "back"},
 }
 
-function Dificultad.load(escena)  opcion = 1 end
+function Dificultad.load(escena)
+    opcion = 1
+    Base.resetHover()
+end
 
 function Dificultad.draw(escena)
     Base.draw(items, opcion, escena, "dificultad")

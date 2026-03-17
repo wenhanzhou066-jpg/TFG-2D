@@ -1,19 +1,22 @@
-
--- Submenu de modos de juego.
+-- Submenu de modos de juego
 
 local Base = require("systems.menu.base")
+
 local Jugar = {}
 local opcion = 1
 local items = {
-    { "Elegir mapa",        "Choose map",          ">mapas"       },
-    { "Oleadas",            "Waves"                               },
-    { "Cooperativo",        "Cooperative"                         },
-    { "Multijugador",       "Multiplayer",          ">multijugador"},
-    { "Practicar con bots", "Practice with bots",   ">dificultad" },
-    { "Volver",             "Back",                 "back"        },
+    { "Elegir mapa", "Choose map", ">mapas"},
+    { "Oleadas", "Waves"},
+    { "Cooperativo", "Cooperative"},
+    { "Multijugador", "Multiplayer", ">multijugador" },
+    { "Practicar con bots", "Practice with bots",  ">dificultad"  },
+    { "Volver", "Back", "back"},
 }
 
-function Jugar.load(escena)  opcion = 1 end
+function Jugar.load(escena)
+    opcion = 1
+    Base.resetHover()
+end
 
 function Jugar.draw(escena)
     Base.draw(items, opcion, escena, "jugar")

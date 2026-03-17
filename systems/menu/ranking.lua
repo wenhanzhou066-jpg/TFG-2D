@@ -1,7 +1,7 @@
-
--- Submenu de ranking.
+-- Submenu de ranking
 
 local Base = require("systems.menu.base")
+
 local Ranking = {}
 local opcion = 1
 local items = {
@@ -11,7 +11,10 @@ local items = {
     { "Volver", "Back", "back"},
 }
 
-function Ranking.load(escena)  opcion = 1 end
+function Ranking.load(escena)
+    opcion = 1
+    Base.resetHover()
+end
 
 function Ranking.draw(escena)
     Base.draw(items, opcion, escena, "ranking")

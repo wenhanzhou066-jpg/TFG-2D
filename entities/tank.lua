@@ -1,4 +1,4 @@
--- Control del tanque del jugador:
+-- Control del tanque del jugador
 
 local Tracks = require("systems.tracks")
 
@@ -36,15 +36,15 @@ local function isBlocked(nx, ny, r)
     -- colisión con ríos
     local pts = {{nx+r,ny},{nx-r,ny},{nx,ny+r},{nx,ny-r}}
 
-    for _,p in ipairs(pts) do
-        for _,rv in ipairs(Map.getRivers()) do
+    for _, p in ipairs(pts) do
+        for _, rv in ipairs(Map.getRivers()) do
 
             if p[1] >= rv.x and p[1] <= rv.x+rv.w and
                p[2] >= rv.y and p[2] <= rv.y+rv.h then
 
                 local onBridge = false
 
-                for _,br in ipairs(Map.getBridges()) do
+                for _, br in ipairs(Map.getBridges()) do
                     if p[1] >= br.x and p[1] <= br.x+br.w and
                        p[2] >= br.y and p[2] <= br.y+br.h then
                         onBridge = true
@@ -87,26 +87,21 @@ function tanque.load()
         y = sprites.weapon:getHeight()/2
     }
 
-     -- centrar torreta
+    -- centrar torreta
     sprites.weaponOffset = 15
 
     local r = math.floor(sprites.hull:getWidth()*escala/2*0.75)
 
     datos = {
-
         x = 400,
         y = 300,
-
         angulo = 0,
         anguloTorreta = 0,
-
         velocidad = 0,
         aceleracion = 300,
         velMax = 150,
         friccion = 200,
-
         radio = r,
-
         trackTimer = 0,
         isMoving = false
     }
@@ -116,92 +111,72 @@ function tanque.update(dt)
 
     datos.isMoving = false
     local r = datos.radio
-
     local nx, ny = datos.x, datos.y
 
     -- MOVIMIENTO CON ACELERACION
     if love.keyboard.isDown("w") then
-
         datos.velocidad = math.min(
             datos.velocidad + datos.aceleracion * dt,
             datos.velMax
         )
-
     elseif love.keyboard.isDown("s") then
-
         datos.velocidad = math.max(
             datos.velocidad - datos.aceleracion * dt,
             -datos.velMax/2
         )
-
     else
-
         if datos.velocidad > 0 then
             datos.velocidad = math.max(datos.velocidad - datos.friccion * dt, 0)
-
         elseif datos.velocidad < 0 then
             datos.velocidad = math.min(datos.velocidad + datos.friccion * dt, 0)
         end
     end
 
-
     nx = nx + math.cos(datos.angulo) * datos.velocidad * dt
     ny = ny + math.sin(datos.angulo) * datos.velocidad * dt
-
 
     -- COLISIONES
     local oldx, oldy = datos.x, datos.y
 
-    if not isBlocked(nx,ny,r) then
+    if not isBlocked(nx, ny, r) then
         datos.x, datos.y = nx, ny
     else
-        if not isBlocked(nx,datos.y,r) then
+        if not isBlocked(nx, datos.y, r) then
             datos.x = nx
-        elseif not isBlocked(datos.x,ny,r) then
+        elseif not isBlocked(datos.x, ny, r) then
             datos.y = ny
         end
     end
 
     datos.isMoving = (datos.x ~= oldx or datos.y ~= oldy)
 
-
     -- ROTACION
     local turnSpeed = 2
 
     if math.abs(datos.velocidad) > 5 then
-
         if love.keyboard.isDown("a") then
             datos.angulo = datos.angulo - turnSpeed * dt
         end
-
         if love.keyboard.isDown("d") then
             datos.angulo = datos.angulo + turnSpeed * dt
         end
-
     end
 
     -- TORRETA APUNTA AL RATON
-    local mx,my = love.mouse.getPosition()
-
-    datos.anguloTorreta = math.atan2(
-        my - datos.y,
-        mx - datos.x
-    )
-
+    local mx, my = love.mouse.getPosition()
+    datos.anguloTorreta = math.atan2(my - datos.y, mx - datos.x)
 
     -- SONIDO MOTOR
     if Audio then
-        Audio.updateEngine(datos.isMoving)
+        Audio.actualizarMotor(datos.isMoving)
     end
 
     -- HUELLAS
     if datos.isMoving then
-
         datos.trackTimer = datos.trackTimer + dt
-
         if datos.trackTimer >= TRACK_INTERVALO then
             datos.trackTimer = 0
-            Tracks.spawn(datos.x,datos.y,datos.angulo)
+            Tracks.spawn(datos.x, datos.y, datos.angulo)
         end
     end
 end
@@ -211,63 +186,34 @@ end
 function tanque.draw()
 
     -- función para dibujar sprite
-    local function drawSprite(img,pivot,angulo,x,y)
-
+    local function drawSprite(img, pivot, angulo, x, y)
         love.graphics.draw(
-            img,
-            x,
-            y,
-            angulo,
-            escala,
-            escala,
-            pivot.x,
-            pivot.y
+            img, x, y, angulo,
+            escala, escala,
+            pivot.x, pivot.y
         )
     end
 
-
-    love.graphics.setColor(1,1,1)
+    love.graphics.setColor(1, 1, 1)
 
     -- orugas
-    drawSprite(
-        sprites.tracks,
-        sprites.tracksPivot,
-        datos.angulo + math.pi/2,
-        datos.x,
-        datos.y
-    )
+    drawSprite(sprites.tracks, sprites.tracksPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
     -- casco
-    drawSprite(
-        sprites.hull,
-        sprites.hullPivot,
-        datos.angulo + math.pi/2,
-        datos.x,
-        datos.y
-    )
+    drawSprite(sprites.hull, sprites.hullPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
     -- torreta desplazada hacia delante
     local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
     local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
-
-    drawSprite(
-        sprites.weapon,
-        sprites.weaponPivot,
-        datos.anguloTorreta + math.pi/2,
-        tx,
-        ty
-    )
+    drawSprite(sprites.weapon, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
 end
 
 
 -- POSICION DEL CAÑON PARA DISPARAR
 function tanque.getMuzzlePos()
-
     local dist = 40
-
     local bx = datos.x + math.cos(datos.anguloTorreta) * dist
     local by = datos.y + math.sin(datos.anguloTorreta) * dist
-
     return bx, by, datos.anguloTorreta
 end
 

@@ -1,12 +1,10 @@
--- main.lua
 -- Punto de entrada del juego.
 -- Gestiona dos escenas: "menu" y "juego".
--- La seleccion de mapa ocurre dentro del menu (systems/menu/mapas.lua).
 
 local Menu = require("systems.menu.init")
 local Game = require("game")
 
-local escena = "menu"   -- "menu" | "juego"
+local escena = "menu"   -- "menu" o "juego"
 
 -- Arranca la partida con el mapa elegido y para la musica del menu
 local function startGame(mapIdx)
@@ -17,12 +15,10 @@ end
 
 -- Vuelve al menu principal y reinicia musica
 local function goMenu()
-    if Audio then Audio.stopMusic() end
+    Game.stopAudio()
     escena = "menu"
     Menu.load()
 end
-
--- ── Ciclo principal ────────────────────────────────────────────
 
 function love.load()
     local sw, sh = love.window.getDesktopDimensions()
@@ -81,6 +77,12 @@ function love.mousepressed(x, y, button)
         Menu.mousepressed(x, y, button)
     elseif escena == "juego" then
         Game.mousepressed(x, y, button)
+    end
+end
+
+function love.mousereleased(x, y, button)
+    if escena == "menu" then
+        Menu.mousereleased(x, y, button)
     end
 end
 

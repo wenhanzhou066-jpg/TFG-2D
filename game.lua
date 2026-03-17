@@ -73,4 +73,9 @@ function Game.mousepressed(x, y, button)
     end
 end
 
+-- Para el audio al salir de la partida
+function Game.stopAudio()
+    Audio.pararMusica()
+end
+
 return Game

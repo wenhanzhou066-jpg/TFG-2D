@@ -27,7 +27,7 @@ local T = {
         personalizar = "CUSTOMIZE",
         ranking = "RANKING",
         configuracion= "SETTINGS",
-        creditos = "CREDITS",
+        creditos = "CREDITS", 
     },
 }
 
@@ -150,7 +150,7 @@ function Base.mousemoved(my, items)
     return nil
 end
 
--- Resetea el hover al entrar a un menu (evita sonido falso)
+-- Resetea el hover al entrar a un menu
 function Base.resetHover()
     ultimoHover = nil
 end

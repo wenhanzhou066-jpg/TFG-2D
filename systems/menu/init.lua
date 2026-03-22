@@ -129,6 +129,11 @@ function Menu.mousereleased(mx, my, btn)
     if p and p.mousereleased then p.mousereleased(mx, my, btn) end
 end
 
+function Menu.textinput(t)
+    local p = pantallas[estado]
+    if p and p.textinput then p.textinput(t) end
+end
+
 function Menu.resize()
     UI.loadFonts()
 end

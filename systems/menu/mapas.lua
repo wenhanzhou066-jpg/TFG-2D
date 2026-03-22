@@ -6,10 +6,11 @@ local Base = require("systems.menu.base")
 local Mapas = {}
 local opcion = 1
 local items = {
-    { "Bosque", "Forest", "play_map_1" },
-    { "Volcan", "Volcano", "play_map_2" },
-    { "Nieve",  "Snow", "play_map_3" },
-    { "Volver", "Back", "back"},
+    { "Bosque",  "Forest",  "play_map_1" },
+    { "Volcan",  "Volcano", "play_map_2" },
+    { "Nieve",   "Snow",    "play_map_3" },
+    { "Ciudad",  "City",    "play_map_4" },
+    { "Volver",  "Back",    "back" },
 }
 
 function Mapas.load(escena)

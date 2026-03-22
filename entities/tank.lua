@@ -7,16 +7,15 @@ local sprites = {}
 local datos = {}
 local TRACK_INTERVALO = 0.08
 local escala = 0.3
-local MAP_W = 1920
-local MAP_H = 1080
-
-
 -- FUNCION DE COLISION
 local function isBlocked(nx, ny, r)
 
-    -- límites del mapa
-    if nx - r < 0 or nx + r > MAP_W or
-       ny - r < 0 or ny + r > MAP_H then
+    -- límites del mapa (dinámico según el mapa cargado)
+    local ms = Map and Map.getSize and Map.getSize()
+    local MW = ms and ms.w or 1920
+    local MH = ms and ms.h or 1080
+    if nx - r < 0 or nx + r > MW or
+       ny - r < 0 or ny + r > MH then
         return true
     end
 
@@ -64,7 +63,8 @@ end
 
 
 -- CARGA DEL TANQUE
-function tanque.load()
+-- sx, sy: posición de spawn (opcional; usa el spawn NW por defecto)
+function tanque.load(sx, sy)
 
     -- cargar sprites
     sprites.tracks = love.graphics.newImage("assets/images/PNG/Tracks/Track_1_A.png")
@@ -93,8 +93,8 @@ function tanque.load()
     local r = math.floor(sprites.hull:getWidth()*escala/2*0.75)
 
     datos = {
-        x = 400,
-        y = 300,
+        x = sx or 170,
+        y = sy or 185,
         angulo = 0,
         anguloTorreta = 0,
         velocidad = 0,
@@ -103,7 +103,8 @@ function tanque.load()
         friccion = 200,
         radio = r,
         trackTimer = 0,
-        isMoving = false
+        isMoving = false,
+        torretaDir = 0,   -- dirección de giro actual: -1, 0 o 1
     }
 end
 
@@ -162,9 +163,37 @@ function tanque.update(dt)
         end
     end
 
-    -- TORRETA APUNTA AL RATON
+    -- TORRETA: rotación con inercia hacia el ratón
     local mx, my = love.mouse.getPosition()
-    datos.anguloTorreta = math.atan2(my - datos.y, mx - datos.x)
+    if GameView then
+        mx = (mx - GameView.ox) / GameView.scale + (Camera and Camera.x or 0)
+        my = (my - GameView.oy) / GameView.scale + (Camera and Camera.y or 0)
+    end
+    local targetTorreta = math.atan2(my - datos.y, mx - datos.x)
+    local diffTorreta   = targetTorreta - datos.anguloTorreta
+    while diffTorreta >  math.pi do diffTorreta = diffTorreta - 2*math.pi end
+    while diffTorreta < -math.pi do diffTorreta = diffTorreta + 2*math.pi end
+
+    local TURRET_SPEED = 3.5  -- rad/s
+    local prevDir = datos.torretaDir
+    local newDir  = 0
+    if math.abs(diffTorreta) > 0.005 then
+        newDir = diffTorreta > 0 and 1 or -1
+        local paso = math.min(math.abs(diffTorreta), TURRET_SPEED * dt)
+        datos.anguloTorreta = datos.anguloTorreta + newDir * paso
+    else
+        datos.anguloTorreta = targetTorreta
+    end
+    datos.torretaDir = newDir
+
+    -- SONIDO DE TORRETA
+    if Audio then
+        if newDir ~= 0 then
+            Audio.torretaGirando(newDir ~= prevDir)  -- reiniciar si cambia dirección
+        else
+            Audio.torretaParada()
+        end
+    end
 
     -- SONIDO MOTOR
     if Audio then
@@ -194,18 +223,26 @@ function tanque.draw()
         )
     end
 
+    -- orugas (siempre blanco)
     love.graphics.setColor(1, 1, 1)
-
-    -- orugas
     drawSprite(sprites.tracks, sprites.tracksPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
-    -- casco
+    -- casco y torreta con color del perfil activo
+    local Perfil = require("systems.perfil")
+    local cr, cg, cb = 1, 1, 1
+    if Perfil.activo then
+        cr = Perfil.activo.colorR
+        cg = Perfil.activo.colorG
+        cb = Perfil.activo.colorB
+    end
+    love.graphics.setColor(cr, cg, cb)
     drawSprite(sprites.hull, sprites.hullPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
     -- torreta desplazada hacia delante
     local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
     local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
     drawSprite(sprites.weapon, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
+    love.graphics.setColor(1, 1, 1)
 end
 
 

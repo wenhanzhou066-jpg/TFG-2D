@@ -1,8 +1,8 @@
 -- Punto de entrada del juego.
 -- Gestiona tres escenas: "menu", "juego" y "multiplayer".
 
-local Menu = require("systems.menu.init")
-local Game = require("game")
+local Menu            = require("systems.menu.init")
+local Game            = require("game")
 local GameMultiplayer = require("game_multiplayer")
 
 local escena = "menu"   -- "menu", "juego", o "multiplayer"
@@ -51,9 +51,10 @@ function love.update(dt)
         local action = Menu.getAction()
         if action then
             Menu.clearAction()
-            if     action == "play_map_1" then startGame(1)
-            elseif action == "play_map_2" then startGame(2)
-            elseif action == "play_map_3" then startGame(3)
+            if     action == "play_map_1"       then startGame(1)
+            elseif action == "play_map_2"       then startGame(2)
+            elseif action == "play_map_3"       then startGame(3)
+            elseif action == "play_map_4"       then startGame(4)
             elseif action == "play_multiplayer" then startMultiplayer(1)
             end
         end
@@ -105,6 +106,12 @@ end
 function love.mousereleased(x, y, button)
     if escena == "menu" then
         Menu.mousereleased(x, y, button)
+    end
+end
+
+function love.textinput(t)
+    if escena == "menu" then
+        Menu.textinput(t)
     end
 end
 

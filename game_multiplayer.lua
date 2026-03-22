@@ -7,9 +7,9 @@ local Red = require("network")
 
 -- Los 3 mapas disponibles
 local allMaps = {
-    require("systems.map"),
-    require("systems.map_volcano"),
-    require("systems.map_snow"),
+    require("systems.maps.map"),
+    require("systems.maps.map_volcano"),
+    require("systems.maps.map_snow"),
 }
 
 -- Globales
@@ -228,10 +228,9 @@ end
 function GameMultiplayer.mousepressed(x, y, button)
     if button == 1 then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle, "plasma")
-
-        -- Enviar evento de disparo a otros jugadores
-        Red.enviar_bala(bx, by, angle, "plasma")
+        Bullet.spawn(bx, by, angle, "light")
+        Effects.spawnSmoke(bx, by, angle)
+        Red.enviar_bala(bx, by, angle, "light")
     end
 end
 

@@ -11,6 +11,10 @@ local pantallas = {
     mapas = require("systems.menu.mapas"),
     multijugador = require("systems.menu.multijugador"),
     lobby = require("systems.menu.lobby"),
+    lobby_create = require("systems.menu.lobby"),  -- Usar mismo lobby pero en modo "create"
+    lobby_join = require("systems.menu.lobby"),    -- Usar mismo lobby pero en modo "join"
+    room_config = require("systems.menu.room_config"),
+    room_browser = require("systems.menu.room_browser"),
     dificultad = require("systems.menu.dificultad"),
     personalizar = require("systems.menu.personalizar"),
     ranking = require("systems.menu.ranking"),
@@ -27,9 +31,31 @@ local tiempo = 0
 local musica, botonImg, botonExitImg, tituloImg, fondos
 
 -- Navega a una nueva pantalla guardando la anterior en el historial
-local function navegarA(nuevoEstado)
+local function navegarA(nuevoEstado, params)
     table.insert(historial, estado)
     estado = nuevoEstado
+
+    -- Pantallas que necesitan recargarse al navegar
+    local needsReload = {
+        room_config = true,
+        room_browser = true,
+        lobby = true,
+        lobby_create = true,
+        lobby_join = true
+    }
+
+    -- Recargar pantalla si lo necesita o si se proporcionan parámetros
+    local p = pantallas[estado]
+    if p and p.load and (needsReload[estado] or params) then
+        -- Determinar modo basado en el nombre del estado
+        local mode = nil
+        if estado == "lobby_create" then
+            mode = "create"
+        elseif estado == "lobby_join" then
+            mode = "join"
+        end
+        p.load(escena, mode, params)
+    end
 end
 
 -- Vuelve a la pantalla anterior del historial
@@ -93,8 +119,13 @@ function Menu.load()
         love.graphics.newImage("assets/menu/parallax-mountain-trees.png"),
     }
 
+    -- Cargar todas las pantallas, evitando cargar el mismo módulo múltiples veces
+    local loaded = {}
     for _, pantalla in pairs(pantallas) do
-        if pantalla.load then pantalla.load(escena) end
+        if pantalla.load and not loaded[pantalla] then
+            pantalla.load(escena)
+            loaded[pantalla] = true
+        end
     end
 end
 

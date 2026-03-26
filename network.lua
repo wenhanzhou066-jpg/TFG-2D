@@ -13,6 +13,7 @@ Red.id_jugador = nil
 Red.id_sala = nil  -- ID de sala/lobby actual
 Red.otros_jugadores = {}  -- {id_jugador: {x, y, angulo}}
 Red.balas_recibidas = {}  -- Cola de balas recibidas de otros jugadores
+Red.salas_disponibles = {}  -- Lista de salas del servidor
 Red.tasa_envio = 0.03  -- Enviar actualizaciones cada 30ms (~33 Hz) - Antes: 0.05 (20 Hz)
 Red.temporizador_envio = 0
 Red.update_llamado = false  -- Bandera de debug
@@ -39,17 +40,24 @@ function Red.init(ip_servidor, puerto_servidor)
     return true
 end
 
-function Red.conectar(id_sala)
+function Red.conectar(id_sala, metadata)
     if not Red.udp then
         print("[ERROR] ¡Red no inicializada!")
         return false
     end
 
     Red.id_sala = id_sala or "default"
-    local msg = json.encode({
+    local msg_data = {
         type = "connect",
         room_id = Red.id_sala
-    })
+    }
+
+    -- Agregar metadatos si se proporcionan (al crear sala)
+    if metadata then
+        msg_data.metadata = metadata
+    end
+
+    local msg = json.encode(msg_data)
     print("[DEBUG] Enviando mensaje de conexión a sala '" .. Red.id_sala .. "': " .. msg)
 
     -- Usar send() en vez de sendto() ya que usamos setpeername()
@@ -204,9 +212,38 @@ function Red.manejar_mensaje(msg)
             print("[CLIENTE] Bala recibida de jugador " .. msg.player_id)
         end
 
+    elseif tipo_msg == "rooms_list" then
+        -- Lista de salas disponibles
+        Red.salas_disponibles = msg.rooms or {}
+        print("[CLIENTE] Recibida lista de " .. #Red.salas_disponibles .. " salas")
+
     else
         print("[CLIENTE] Tipo de mensaje desconocido: " .. tostring(tipo_msg))
     end
+end
+
+-- Solicitar lista de salas disponibles
+function Red.solicitar_lista_salas()
+    if not Red.udp then
+        print("[ERROR] ¡Red no inicializada!")
+        return false
+    end
+
+    local msg = json.encode({ type = "list_rooms" })
+    local enviado, err = Red.udp:send(msg)
+
+    if not enviado and err then
+        print("[AVISO] Error al solicitar lista: " .. err)
+        return false
+    end
+
+    print("[CLIENTE] Solicitando lista de salas...")
+    return true
+end
+
+-- Obtener lista de salas
+function Red.obtener_salas()
+    return Red.salas_disponibles
 end
 
 function Red.obtener_otros_jugadores()

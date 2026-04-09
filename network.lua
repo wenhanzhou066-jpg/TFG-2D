@@ -2,7 +2,7 @@
 -- Cliente UDP simple para juego de tanques multijugador
 
 local socket = require("socket")
-local json = require("systems.json")
+local binary_protocol = require("binary_protocol")
 
 local Red = {}
 Red.udp = nil
@@ -57,8 +57,8 @@ function Red.conectar(id_sala, metadata)
         msg_data.metadata = metadata
     end
 
-    local msg = json.encode(msg_data)
-    print("[DEBUG] Enviando mensaje de conexión a sala '" .. Red.id_sala .. "': " .. msg)
+    local msg = binary_protocol.encode(msg_data)
+    print("[DEBUG] Enviando mensaje de conexión binario a sala '" .. Red.id_sala .. "'")
 
     -- Usar send() en vez de sendto() ya que usamos setpeername()
     local enviado, err = Red.udp:send(msg)
@@ -75,7 +75,7 @@ end
 
 function Red.desconectar()
     if Red.udp and Red.conectado then
-        local msg = json.encode({type = "disconnect"})
+        local msg = binary_protocol.encode({type = "disconnect"})
         Red.udp:send(msg)
         Red.conectado = false
         print("[CLIENTE] Desconectado")
@@ -85,7 +85,7 @@ end
 function Red.enviar_actualizacion(x, y, angulo)
     if not Red.conectado then return end
 
-    local msg = json.encode({
+    local msg = binary_protocol.encode({
         type = "update",
         x = x,
         y = y,
@@ -102,7 +102,7 @@ end
 function Red.enviar_bala(x, y, angulo, tipo_bala)
     if not Red.conectado then return end
 
-    local msg = json.encode({
+    local msg = binary_protocol.encode({
         type = "bullet",
         x = x,
         y = y,
@@ -155,14 +155,13 @@ function Red.recibir()
         end
 
         contador_mensajes = contador_mensajes + 1
-        print("[DEBUG] Datos recibidos: " .. datos)
+        print("[DEBUG] Mensaje binario recibido (" .. #datos .. " bytes)")
 
-        local exito, msg = pcall(json.decode, datos)
-        if exito then
+        local msg, err = binary_protocol.decode(datos)
+        if msg then
             Red.manejar_mensaje(msg)
         else
-            print("[ERROR] Fallo al decodificar JSON: " .. datos)
-            print("[ERROR] Error de decodificación: " .. tostring(msg))
+            print("[ERROR] Fallo al decodificar mensaje binario: " .. tostring(err))
         end
     end
 
@@ -229,7 +228,7 @@ function Red.solicitar_lista_salas()
         return false
     end
 
-    local msg = json.encode({ type = "list_rooms" })
+    local msg = binary_protocol.encode({ type = "list_rooms" })
     local enviado, err = Red.udp:send(msg)
 
     if not enviado and err then

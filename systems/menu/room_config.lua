@@ -7,6 +7,7 @@ local UI = require("systems.ui")
 local RoomConfig = {}
 local selectedMode = 1
 local roomInput = ""
+local creatingRoom = false  -- Prevenir doble-click
 
 local gameModes = {
     { id = "1v1", name = "1 vs 1", name_en = "1 vs 1", max_players = 2, desc = "Duelo individual" },
@@ -23,6 +24,7 @@ local fonts = {
 function RoomConfig.load(escena)
     selectedMode = 1
     roomInput = "sala_" .. math.random(1000, 9999)
+    creatingRoom = false  -- Reset flag
 
     local H = love.graphics.getHeight()
     fonts.big = love.graphics.newFont(math.floor(H * 0.06))
@@ -132,7 +134,8 @@ function RoomConfig.keypressed(key, escena)
         if selectedMode > #gameModes then selectedMode = 1 end
 
     elseif key == "return" or key == "kpenter" then
-        if roomInput ~= "" then
+        if roomInput ~= "" and not creatingRoom then
+            creatingRoom = true  -- Prevenir múltiples creaciones
             -- Crear sala con configuración
             local mode = gameModes[selectedMode]
             local metadata = {
@@ -196,8 +199,9 @@ function RoomConfig.mousepressed(x, y, btn, escena)
 
             if x >= btnX and x <= btnX + buttonW and y >= buttonY and y <= buttonY + buttonH then
                 selectedMode = i
-                -- Crear sala inmediatamente al hacer click
-                if roomInput ~= "" then
+                -- Crear sala inmediatamente al hacer click (con protección anti-doble-click)
+                if roomInput ~= "" and not creatingRoom then
+                    creatingRoom = true  -- Prevenir múltiples creaciones
                     local mode = gameModes[selectedMode]
                     local metadata = {
                         game_mode = mode.id,

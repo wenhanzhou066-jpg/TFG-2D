@@ -19,6 +19,20 @@ Bullet = require("entities.bullet")
 Effects = require("systems.effects")
 Tracks = require("systems.tracks")
 Audio = require("systems.audio")
+Camera = {x=0, y=0}   -- Cámara que sigue al tanque
+
+-- Canvas de resolución fija
+local GAME_W, GAME_H = 1920, 1080
+local gameCanvas = nil
+GameView = { scale = 1, ox = 0, oy = 0 }
+
+local function recalcView()
+    local sw, sh = love.graphics.getDimensions()
+    local s = math.min(sw / GAME_W, sh / GAME_H)
+    GameView.scale = s
+    GameView.ox = math.floor((sw - GAME_W * s) / 2)
+    GameView.oy = math.floor((sh - GAME_H * s) / 2)
+end
 
 -- Estado multijugador
 local otherTanks = {} -- {player_id: {x, y, angulo, turretAngle, target_x, target_y, target_angulo}}
@@ -31,11 +45,26 @@ local INTERP_SPEED = 10  -- Velocidad de interpolación (mayor = más rápido)
 local otherTankSprites = {}
 
 function GameMultiplayer.load(mapIdx)
+    recalcView()
+    if not gameCanvas then
+        gameCanvas = love.graphics.newCanvas(GAME_W, GAME_H)
+    end
+
     Map = allMaps[mapIdx or 1]
     Map.load()
+    Camera = {x=0, y=0}  -- Reiniciar cámara
+
+    -- Obtener spawn point basado en ID de jugador
+    local spawns = Map.getSpawns()
+    local myPlayerId = Red.id_jugador or 1
+    local spawnIndex = ((myPlayerId - 1) % #spawns) + 1  -- Ciclar entre spawns
+    local spawn = spawns[spawnIndex]
+
+    print(string.format("[MULTIPLAYER] Spawning player %d at spawn point %d: (%.0f, %.0f)",
+        myPlayerId, spawnIndex, spawn.x, spawn.y))
 
     if not subsystemsLoaded then
-        Tank.load()
+        Tank.load(spawn.x, spawn.y)
         Bullet.load()
         Effects.load()
         Tracks.load()
@@ -46,7 +75,7 @@ function GameMultiplayer.load(mapIdx)
         otherTankSprites.hull = love.graphics.newImage("assets/images/PNG/Hulls_Color_B/Hull_01.png")
         otherTankSprites.weapon = love.graphics.newImage("assets/images/PNG/Weapon_Color_B/Gun_01.png")
     else
-        Tank.load()
+        Tank.load(spawn.x, spawn.y)
     end
 
     Audio.load(mapIdx or 1)
@@ -62,6 +91,12 @@ function GameMultiplayer.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
 
+    -- Actualizar cámara para seguir al tanque
+    local mapSize = Map.getSize()
+    local tx, ty = Tank.getPosition()
+    Camera.x = math.max(0, math.min(tx - GAME_W/2, mapSize.w - GAME_W))
+    Camera.y = math.max(0, math.min(ty - GAME_H/2, mapSize.h - GAME_H))
+
     -- Enviar posición a servidor
     local x, y, angle = Tank.getPosition()
     local _, turretAngle = Tank.getAngles()
@@ -70,10 +105,19 @@ function GameMultiplayer.update(dt)
     -- Recibir posiciones de otros jugadores
     local otherPlayers = Red.obtener_otros_jugadores()
 
+    -- Debug: contar otros jugadores
+    local count = 0
+    for _ in pairs(otherPlayers) do count = count + 1 end
+    if count > 0 then
+        print(string.format("[MULTIPLAYER] %d otro(s) jugador(es) detectado(s)", count))
+    end
+
     -- Actualizar posiciones objetivo de otros jugadores
     for pid, pdata in pairs(otherPlayers) do
         if not otherTanks[pid] then
             -- Nuevo jugador: crear con posición inicial
+            print(string.format("[MULTIPLAYER] Nuevo jugador detectado: ID=%d, pos=(%.0f, %.0f)",
+                pid, pdata.x, pdata.y))
             otherTanks[pid] = {
                 x = pdata.x,
                 y = pdata.y,
@@ -125,7 +169,12 @@ function GameMultiplayer.update(dt)
 end
 
 function GameMultiplayer.draw()
+    -- Renderizar al canvas con cámara aplicada
+    love.graphics.setCanvas(gameCanvas)
     love.graphics.clear(0.10, 0.10, 0.10)
+    love.graphics.push()
+    love.graphics.translate(-math.floor(Camera.x), -math.floor(Camera.y))
+
     Map.drawGround()
     Tracks.draw()
 
@@ -139,12 +188,23 @@ function GameMultiplayer.draw()
     Effects.draw()
     Map.drawAbove()
 
-    -- HUD multijugador
+    love.graphics.pop()
+
+    -- HUD multijugador (sin cámara)
     GameMultiplayer.drawHUD()
+
+    -- Dibujar canvas escalado a pantalla
+    love.graphics.setCanvas()
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
 end
 
 function GameMultiplayer.drawOtherTanks()
     local escala = 0.3
+
+    -- Debug: mostrar cuántos tanques hay que dibujar
+    local count = 0
+    for _ in pairs(otherTanks) do count = count + 1 end
 
     for pid, tank in pairs(otherTanks) do
         love.graphics.push()
@@ -202,7 +262,7 @@ function GameMultiplayer.drawOtherTanks()
 end
 
 function GameMultiplayer.drawHUD()
-    love.graphics.setColor(0, 1, 0)
+    love.graphics.setColor(1, 1, 1)
     local UI = require("systems.ui")
     if UI.fonts and UI.fonts.small then
         love.graphics.setFont(UI.fonts.small)
@@ -215,6 +275,19 @@ function GameMultiplayer.drawHUD()
 
     local myId = Red.id_jugador or "?"
     love.graphics.print("MULTIJUGADOR | Tu ID: " .. myId .. " | Jugadores: " .. playerCount, 10, 10)
+
+    -- Debug info
+    local tx, ty = Tank.getPosition()
+    love.graphics.print(string.format("Mi pos: (%.0f, %.0f) | Conectado: %s",
+        tx, ty, Red.esta_conectado() and "SI" or "NO"), 10, 30)
+
+    -- Listar otros tanques
+    local y = 50
+    for pid, tank in pairs(otherTanks) do
+        love.graphics.print(string.format("  P%d: (%.0f, %.0f)", pid, tank.x, tank.y), 10, y)
+        y = y + 20
+    end
+
     love.graphics.setColor(1, 1, 1)
 end
 

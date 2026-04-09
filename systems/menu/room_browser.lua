@@ -49,14 +49,16 @@ end
 function RoomBrowser.update(dt, escena)
     refreshTimer = refreshTimer + dt
 
-    -- Auto-refresh cada 2 segundos
-    if refreshTimer >= 2.0 then
+    -- Auto-refresh cada 1 segundo (más frecuente)
+    if refreshTimer >= 1.0 then
         Red.solicitar_lista_salas()
         refreshTimer = 0
     end
 
-    -- Recibir respuestas del servidor
-    Red.recibir()
+    -- Recibir respuestas del servidor (llamar con dt para procesar)
+    if Red.udp then
+        Red.recibir()
+    end
 end
 
 function RoomBrowser.getFilteredRooms()

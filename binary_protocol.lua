@@ -111,15 +111,16 @@ function BinaryProtocol.encode(msg)
         return result
 
     elseif msg_type == "update" then
-        -- [type:1][x:2][y:2][angle:1]
+        -- [type:1][x:2][y:2][angle:1][hp:1]
         local result = pack_byte(BinaryProtocol.MSG_UPDATE)
         result = result .. pack_float(msg.x or 0)
         result = result .. pack_float(msg.y or 0)
         result = result .. pack_angle(msg.angle or 0)
+        result = result .. pack_byte(math.floor(msg.hp or 100))
         return result
 
     elseif msg_type == "state" then
-        -- [type:1][player_count:1][[player_id:2][x:2][y:2][angle:1]]...
+        -- [type:1][player_count:1][[player_id:2][x:2][y:2][angle:1][hp:1]]...
         local result = pack_byte(BinaryProtocol.MSG_STATE)
 
         -- Contar jugadores
@@ -136,6 +137,7 @@ function BinaryProtocol.encode(msg)
             result = result .. pack_float(pdata.x or 0)
             result = result .. pack_float(pdata.y or 0)
             result = result .. pack_angle(pdata.angle or 0)
+            result = result .. pack_byte(math.floor(pdata.hp or 100))
         end
 
         return result
@@ -222,16 +224,18 @@ function BinaryProtocol.decode(data)
         }
 
     elseif msg_type == BinaryProtocol.MSG_UPDATE then
-        local x, y, angle
+        local x, y, angle, hp
         x, offset = unpack_float(data, offset)
         y, offset = unpack_float(data, offset)
         angle, offset = unpack_angle(data, offset)
+        hp, offset = unpack_byte(data, offset)
 
         return {
             type = "update",
             x = x,
             y = y,
-            angle = angle
+            angle = angle,
+            hp = hp
         }
 
     elseif msg_type == BinaryProtocol.MSG_STATE then
@@ -240,13 +244,14 @@ function BinaryProtocol.decode(data)
 
         local players = {}
         for i = 1, player_count do
-            local pid, x, y, angle
+            local pid, x, y, angle, hp
             pid, offset = unpack_short(data, offset)
             x, offset = unpack_float(data, offset)
             y, offset = unpack_float(data, offset)
             angle, offset = unpack_angle(data, offset)
+            hp, offset = unpack_byte(data, offset)
 
-            players[tostring(pid)] = {x = x, y = y, angle = angle}
+            players[tostring(pid)] = {x = x, y = y, angle = angle, hp = hp}
         end
 
         return {

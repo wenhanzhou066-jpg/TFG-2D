@@ -69,6 +69,16 @@ local spawns = {
     {x=3797, y=1820},  -- SE
 }
 
+-- ── Power-up spawns ───────────────────────────────────────────
+local powerupSpawns = {
+    {type="health", x=1920, y=500},   -- Centro norte
+    {type="health", x=1920, y=1660},  -- Centro sur
+    {type="ammo",   x=800,  y=1080},  -- Oeste centro
+    {type="ammo",   x=3040, y=1080},  -- Este centro
+    {type="shield", x=600,  y=600},   -- NW interior
+    {type="speed",  x=3240, y=1560},  -- SE interior
+}
+
 -- ── Tablas ────────────────────────────────────────────────────
 local imgs        = {}
 local rivers      = {}
@@ -674,6 +684,7 @@ function Map.getWalls()   return walls   end
 function Map.getRivers()  return rivers  end
 function Map.getBridges() return bridges end
 function Map.getSpawns()  return spawns  end
+function Map.getPowerupSpawns() return powerupSpawns end
 
 function Map.bulletHit(x, y, r)
     r = r or 1

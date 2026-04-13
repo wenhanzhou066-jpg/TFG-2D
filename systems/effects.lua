@@ -5,6 +5,12 @@ local Effects = {}
 
 local anims  = {}
 local active = {}
+local damageNumbers = {}
+local trailParticles = {}
+
+-- Screen shake
+local shakeAmount = 0
+local shakeDecay = 5
 
 local function loadFrames(prefix, count, useLetters)
     local frames  = {}
@@ -66,7 +72,43 @@ function Effects.spawnSmoke(x, y, angle)
     })
 end
 
+-- Trail de particulas para balas plasma
+function Effects.spawnTrail(x, y, bulletType)
+    table.insert(trailParticles, {
+        x = x,
+        y = y,
+        alpha = 1.0,
+        life = 0.3,
+        size = bulletType == "plasma" and 4 or 3
+    })
+end
+
+-- Numero de daño flotante
+function Effects.spawnDamageNumber(x, y, damage)
+    table.insert(damageNumbers, {
+        x = x,
+        y = y,
+        damage = math.floor(damage),
+        alpha = 1.0,
+        life = 1.0,
+        vy = -50  -- sube
+    })
+end
+
+-- Screen shake
+function Effects.shake(amount)
+    shakeAmount = math.max(shakeAmount, amount)
+end
+
+function Effects.getShakeOffset()
+    if shakeAmount <= 0 then return 0, 0 end
+    local angle = love.math.random() * math.pi * 2
+    local dist = love.math.random() * shakeAmount
+    return math.cos(angle) * dist, math.sin(angle) * dist
+end
+
 function Effects.update(dt)
+    -- Animaciones
     for i = #active, 1, -1 do
         local e = active[i]
 
@@ -85,9 +127,46 @@ function Effects.update(dt)
             end
         end
     end
+
+    -- Damage numbers
+    for i = #damageNumbers, 1, -1 do
+        local d = damageNumbers[i]
+        d.life = d.life - dt
+        d.y = d.y + d.vy * dt
+        d.alpha = d.life
+
+        if d.life <= 0 then
+            table.remove(damageNumbers, i)
+        end
+    end
+
+    -- Trail particles
+    for i = #trailParticles, 1, -1 do
+        local p = trailParticles[i]
+        p.life = p.life - dt
+        p.alpha = p.life / 0.3
+
+        if p.life <= 0 then
+            table.remove(trailParticles, i)
+        end
+    end
+
+    -- Screen shake decay
+    if shakeAmount > 0 then
+        shakeAmount = math.max(0, shakeAmount - shakeDecay * dt)
+    end
 end
 
 function Effects.draw()
+    love.graphics.setColor(1, 1, 1)
+
+    -- Trail particles
+    for _, p in ipairs(trailParticles) do
+        love.graphics.setColor(1, 0.5, 1, p.alpha)
+        love.graphics.circle("fill", p.x, p.y, p.size)
+    end
+
+    -- Animaciones
     love.graphics.setColor(1, 1, 1)
     for _, e in ipairs(active) do
         local frame = e.frames[e.current]
@@ -100,6 +179,14 @@ function Effects.draw()
             end
         end
     end
+
+    -- Damage numbers
+    for _, d in ipairs(damageNumbers) do
+        love.graphics.setColor(1, 1, 0, d.alpha)
+        love.graphics.print("-" .. d.damage, d.x - 10, d.y)
+    end
+
+    love.graphics.setColor(1, 1, 1)
 end
 
 return Effects

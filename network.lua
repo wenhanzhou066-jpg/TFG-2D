@@ -82,14 +82,15 @@ function Red.desconectar()
     end
 end
 
-function Red.enviar_actualizacion(x, y, angulo)
+function Red.enviar_actualizacion(x, y, angulo, hp)
     if not Red.conectado then return end
 
     local msg = binary_protocol.encode({
         type = "update",
         x = x,
         y = y,
-        angle = angulo
+        angle = angulo,
+        hp = hp or 100
     })
 
     -- Usar send() ya que usamos setpeername()
@@ -116,7 +117,7 @@ function Red.enviar_bala(x, y, angulo, tipo_bala)
     end
 end
 
-function Red.update(dt, tanque_x, tanque_y, tanque_angulo)
+function Red.update(dt, tanque_x, tanque_y, tanque_angulo, tanque_hp)
     if not Red.udp then return end
 
     -- Debug: mostrar que update está siendo llamado
@@ -128,7 +129,7 @@ function Red.update(dt, tanque_x, tanque_y, tanque_angulo)
     -- Enviar actualizaciones de posición a tasa fija
     Red.temporizador_envio = Red.temporizador_envio + dt
     if Red.temporizador_envio >= Red.tasa_envio then
-        Red.enviar_actualizacion(tanque_x, tanque_y, tanque_angulo)
+        Red.enviar_actualizacion(tanque_x, tanque_y, tanque_angulo, tanque_hp)
         Red.temporizador_envio = 0
     end
 
@@ -194,7 +195,8 @@ function Red.manejar_mensaje(msg)
                 Red.otros_jugadores[id_jugador] = {
                     x = datos_j.x,
                     y = datos_j.y,
-                    angulo = datos_j.angle
+                    angulo = datos_j.angle,
+                    hp = datos_j.hp or 100
                 }
             end
         end

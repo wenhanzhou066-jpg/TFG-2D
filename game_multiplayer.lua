@@ -16,10 +16,14 @@ local allMaps = {
 Map = nil
 Tank = require("entities.tank")
 Bullet = require("entities.bullet")
+Powerup = require("entities.powerup")
 Effects = require("systems.effects")
 Tracks = require("systems.tracks")
 Audio = require("systems.audio")
 Camera = {x=0, y=0}   -- Cámara que sigue al tanque
+
+-- Exponer GameMultiplayer a Bullet para collision check
+_G.GameMultiplayer = GameMultiplayer
 
 -- Canvas de resolución fija
 local GAME_W, GAME_H = 1920, 1080
@@ -35,11 +39,16 @@ local function recalcView()
 end
 
 -- Estado multijugador
-local otherTanks = {} -- {player_id: {x, y, angulo, turretAngle, target_x, target_y, target_angulo}}
+local otherTanks = {} -- {player_id: {x, y, angulo, turretAngle, target_x, target_y, target_angulo, hp, maxHp}}
 local subsystemsLoaded = false
 
 -- Suavizado de interpolación
-local INTERP_SPEED = 10  -- Velocidad de interpolación (mayor = más rápido)
+local INTERP_SPEED = 15  -- Velocidad de interpolación (mayor = más rápido, menos lag)
+
+-- Exponer otherTanks para collision detection
+function GameMultiplayer.getOtherTanks()
+    return otherTanks
+end
 
 -- Sprites para tanques enemigos
 local otherTankSprites = {}
@@ -66,6 +75,7 @@ function GameMultiplayer.load(mapIdx)
     if not subsystemsLoaded then
         Tank.load(spawn.x, spawn.y)
         Bullet.load()
+        Powerup.load()
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
@@ -78,6 +88,13 @@ function GameMultiplayer.load(mapIdx)
         Tank.load(spawn.x, spawn.y)
     end
 
+    -- Spawnar power-ups
+    Powerup.clear()
+    local powerupSpawns = Map.getPowerupSpawns()
+    for _, sp in ipairs(powerupSpawns) do
+        Powerup.spawn(sp.type, sp.x, sp.y)
+    end
+
     Audio.load(mapIdx or 1)
 
     -- La red ya está inicializada desde el lobby
@@ -88,6 +105,7 @@ function GameMultiplayer.update(dt)
     -- Actualizar tanque local
     Tank.update(dt)
     Bullet.update(dt)
+    Powerup.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
 
@@ -97,10 +115,11 @@ function GameMultiplayer.update(dt)
     Camera.x = math.max(0, math.min(tx - GAME_W/2, mapSize.w - GAME_W))
     Camera.y = math.max(0, math.min(ty - GAME_H/2, mapSize.h - GAME_H))
 
-    -- Enviar posición a servidor
+    -- Enviar posición y HP a servidor
     local x, y, angle = Tank.getPosition()
     local _, turretAngle = Tank.getAngles()
-    Red.update(dt, x, y, angle)
+    local hp, maxHp = Tank.getHP()
+    Red.update(dt, x, y, angle, hp)
 
     -- Recibir posiciones de otros jugadores
     local otherPlayers = Red.obtener_otros_jugadores()
@@ -125,13 +144,16 @@ function GameMultiplayer.update(dt)
                 turretAngle = pdata.angulo,
                 target_x = pdata.x,
                 target_y = pdata.y,
-                target_angulo = pdata.angulo
+                target_angulo = pdata.angulo,
+                hp = 100,
+                maxHp = 100
             }
         else
             -- Actualizar objetivos
             otherTanks[pid].target_x = pdata.x
             otherTanks[pid].target_y = pdata.y
             otherTanks[pid].target_angulo = pdata.angulo
+            otherTanks[pid].hp = pdata.hp or 100
         end
     end
 
@@ -164,7 +186,7 @@ function GameMultiplayer.update(dt)
     -- Recibir y crear balas de otros jugadores
     local balas_recibidas = Red.obtener_balas_recibidas()
     for _, bala in ipairs(balas_recibidas) do
-        Bullet.spawn(bala.x, bala.y, bala.angulo, bala.tipo)
+        Bullet.spawn(bala.x, bala.y, bala.angulo, bala.tipo, "network")
     end
 end
 
@@ -177,6 +199,7 @@ function GameMultiplayer.draw()
 
     Map.drawGround()
     Tracks.draw()
+    Powerup.draw()
 
     -- Dibujar tanques enemigos
     GameMultiplayer.drawOtherTanks()
@@ -257,6 +280,35 @@ function GameMultiplayer.drawOtherTanks()
         love.graphics.setColor(1, 0, 0)
         love.graphics.print("P" .. pid, 0 - 10, -50)
 
+        -- Barra de vida
+        local barW = 60
+        local barH = 6
+        local barX = -barW/2
+        local barY = -50
+
+        local hpPercent = tank.hp / tank.maxHp
+
+        -- Fondo negro
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", barX-1, barY-1, barW+2, barH+2)
+
+        -- Barra HP con color
+        local r, g, b
+        if hpPercent > 0.6 then
+            r, g, b = 0.2, 0.8, 0.2
+        elseif hpPercent > 0.3 then
+            r, g, b = 1.0, 0.8, 0.0
+        else
+            r, g, b = 1.0, 0.2, 0.2
+        end
+
+        love.graphics.setColor(r, g, b)
+        love.graphics.rectangle("fill", barX, barY, barW * hpPercent, barH)
+
+        -- Borde
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.rectangle("line", barX-1, barY-1, barW+2, barH+2)
+
         love.graphics.pop()
     end
 end
@@ -299,9 +351,9 @@ function GameMultiplayer.keypressed(key, goMenu)
 end
 
 function GameMultiplayer.mousepressed(x, y, button)
-    if button == 1 then
+    if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle, "light")
+        Bullet.spawn(bx, by, angle, "light", "local")
         Effects.spawnSmoke(bx, by, angle)
         Red.enviar_bala(bx, by, angle, "light")
     end

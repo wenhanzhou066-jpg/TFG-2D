@@ -17,6 +17,7 @@ local allMaps = {
 Map     = nil
 Tank    = require("entities.tank")
 Bullet  = require("entities.bullet")
+Powerup = require("entities.powerup")
 Effects = require("systems.effects")
 Tracks  = require("systems.tracks")
 Audio   = require("systems.audio")
@@ -54,11 +55,19 @@ function Game.load(mapIdx)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
+        Powerup.load()
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
     else
         Tank.load(sp.x, sp.y)
+    end
+
+    -- Spawnar power-ups en el mapa
+    Powerup.clear()
+    local spawns = Map.getPowerupSpawns()
+    for _, sp in ipairs(spawns) do
+        Powerup.spawn(sp.type, sp.x, sp.y)
     end
 
     Audio.load(mapIdx or 1)
@@ -67,6 +76,7 @@ end
 function Game.update(dt)
     Tank.update(dt)
     Bullet.update(dt)
+    Powerup.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
     -- Actualizar cámara para seguir al tanque, clampeada a los límites del mapa
@@ -81,9 +91,14 @@ function Game.draw()
     love.graphics.setCanvas(gameCanvas)
     love.graphics.clear(0.10, 0.10, 0.10)
     love.graphics.push()
-    love.graphics.translate(-math.floor(Camera.x), -math.floor(Camera.y))
+
+    -- Aplicar screen shake
+    local shakeX, shakeY = Effects.getShakeOffset()
+    love.graphics.translate(-math.floor(Camera.x) + shakeX, -math.floor(Camera.y) + shakeY)
+
     Map.drawGround()
     Tracks.draw()
+    Powerup.draw()
     Tank.draw()
     Bullet.draw()
     Effects.draw()
@@ -108,9 +123,9 @@ function Game.keypressed(key, onEscape)
 end
 
 function Game.mousepressed(x, y, button)
-    if button == 1 then
+    if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle, "light")
+        Bullet.spawn(bx, by, angle, "light", "local")
         Effects.spawnSmoke(bx, by, angle)
     end
 end

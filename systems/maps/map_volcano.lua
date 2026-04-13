@@ -40,6 +40,13 @@ local spawns = {
     { x = 1750, y = 900 },  -- SE
 }
 
+local powerupSpawns = {
+    {type="health", x=960,  y=300},   -- Centro norte
+    {type="health", x=960,  y=780},   -- Centro sur
+    {type="speed",  x=400,  y=540},   -- Oeste centro
+    {type="ammo",   x=1520, y=540},   -- Este centro
+}
+
 -- ── Helpers de tiling ──────────────────────────────────────────
 local function drawTiledH(img, rx, ry, rw, rh)
     local iw, ih = img:getWidth(), img:getHeight()
@@ -301,6 +308,7 @@ function MapVolcano.getWalls()   return walls   end
 function MapVolcano.getRivers()  return rivers  end
 function MapVolcano.getBridges() return bridges end
 function MapVolcano.getSpawns()  return spawns  end
+function MapVolcano.getPowerupSpawns() return powerupSpawns end
 
 function MapVolcano.bulletHit(x, y)
     for _, w in ipairs(walls) do

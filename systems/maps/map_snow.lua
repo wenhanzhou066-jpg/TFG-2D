@@ -42,6 +42,13 @@ local spawns = {
     { x = 1750, y = 895 },  -- SE
 }
 
+local powerupSpawns = {
+    {type="health", x=960,  y=300},   -- Centro norte
+    {type="health", x=960,  y=780},   -- Centro sur
+    {type="shield", x=400,  y=540},   -- Oeste centro
+    {type="speed",  x=1520, y=540},   -- Este centro
+}
+
 -- ── Helpers de tiling ──────────────────────────────────────────
 local function drawTiledH(img, rx, ry, rw, rh)
     local iw, ih = img:getWidth(), img:getHeight()
@@ -351,6 +358,7 @@ function MapSnow.getWalls()   return walls   end
 function MapSnow.getRivers()  return rivers  end
 function MapSnow.getBridges() return bridges end
 function MapSnow.getSpawns()  return spawns  end
+function MapSnow.getPowerupSpawns() return powerupSpawns end
 
 function MapSnow.bulletHit(x, y)
     for _, w in ipairs(walls) do

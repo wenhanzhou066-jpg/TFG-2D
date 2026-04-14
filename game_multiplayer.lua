@@ -3,6 +3,11 @@
 
 local GameMultiplayer = {}
 
+local leaderboard = require("systems.leaderboard")
+local Perfil      = require("systems.perfil")
+
+local stats = { kills = 0, muertes = 0, victoria = false }
+
 local Red = require("network")
 
 -- Los 3 mapas disponibles
@@ -85,7 +90,11 @@ end
 -- Sprites para tanques enemigos
 local otherTankSprites = {}
 
+function GameMultiplayer.addKill()   stats.kills   = stats.kills   + 1 end
+function GameMultiplayer.addMuerte() stats.muertes = stats.muertes + 1 end
+
 function GameMultiplayer.load(mapIdx)
+    stats = { kills = 0, muertes = 0, victoria = false }
     recalcView()
     if not gameCanvas then
         gameCanvas = love.graphics.newCanvas(GAME_W, GAME_H)
@@ -417,6 +426,15 @@ end
 
 function GameMultiplayer.keypressed(key, goMenu)
     if key == "escape" then
+        if Perfil.activo then
+            leaderboard.enviarPartida(
+                Perfil.activo.gamertag,
+                stats.kills,
+                stats.muertes,
+                stats.victoria,
+                "multi"
+            )
+        end
         Red.desconectar()
         goMenu()
     end

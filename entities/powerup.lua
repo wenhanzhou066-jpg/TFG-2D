@@ -11,6 +11,7 @@ local PowerupTypes = {
         img = "Pickup_health.png",
         color = {0.2, 1.0, 0.2},
         radius = 20,
+        duration = 0,  -- Instantáneo
         effect = function()
             if Tank and Tank.heal then
                 Tank.heal(30)
@@ -21,6 +22,7 @@ local PowerupTypes = {
         img = "Pickup_ammo.png",
         color = {1.0, 0.8, 0.2},
         radius = 20,
+        duration = 10,  -- 10 segundos
         effect = function()
             -- TODO: implementar sistema de munición
             print("[POWERUP] Ammo recogido")
@@ -30,6 +32,7 @@ local PowerupTypes = {
         img = "Pickup_shield.png",
         color = {0.3, 0.5, 1.0},
         radius = 20,
+        duration = 8,  -- 8 segundos
         effect = function()
             -- TODO: implementar escudo temporal
             print("[POWERUP] Escudo activado")
@@ -39,6 +42,7 @@ local PowerupTypes = {
         img = "Pickup_speed.png",
         color = {1.0, 0.3, 1.0},
         radius = 20,
+        duration = 5,  -- 5 segundos
         effect = function()
             -- TODO: implementar boost de velocidad
             print("[POWERUP] Speed boost activado")
@@ -134,6 +138,11 @@ function Powerup.collect(index)
     -- Sonido (si existe)
     if Audio and Audio.powerup then
         Audio.powerup()
+    end
+
+    -- Notificación (multiplayer o singleplayer)
+    if GameMultiplayer and GameMultiplayer.showPowerupNotification then
+        GameMultiplayer.showPowerupNotification(p.tipo, pType.duration)
     end
 
     print("[POWERUP] Recogido: " .. p.tipo)

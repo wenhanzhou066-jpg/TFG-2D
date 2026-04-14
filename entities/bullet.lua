@@ -135,9 +135,16 @@ function Bullet.update(dt)
         elseif b.spawnTime > 0.1 and b.ownerId == "local" then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius)
             if hit then
-                -- Visual feedback only (server handles damage)
+                -- Visual feedback + optimistic HP update
                 Effects.spawnExplosion(hitx or b.x, hity or b.y, b.type, b.radius)
+                Effects.spawnDamageNumber(hitx or b.x, (hity or b.y) - 30, b.damage)
                 if Audio then Audio.explosion() end
+
+                -- Predict HP drop locally (server will send authoritative value later)
+                if GameMultiplayer and GameMultiplayer.damageOtherTank then
+                    GameMultiplayer.damageOtherTank(pid, b.damage)
+                end
+
                 destroyed = true
             end
         end

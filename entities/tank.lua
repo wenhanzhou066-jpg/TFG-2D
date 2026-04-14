@@ -95,7 +95,7 @@ function tanque.load(sx, sy)
 end
 
 function tanque.update(dt)
-    -- Manejar respawn si está muerto (Código del compañero)
+    -- Manejar respawn si está muerto
     if datos.isDead then
         datos.respawnTimer = datos.respawnTimer - dt
         if datos.respawnTimer <= 0 then
@@ -104,7 +104,7 @@ function tanque.update(dt)
         return
     end
 
-    -- Invulnerabilidad temporal después de respawn (Código del compañero)
+    -- Invulnerabilidad temporal después de respawn
     if datos.invulnerable then
         datos.invulnTimer = datos.invulnTimer - dt
         if datos.invulnTimer <= 0 then
@@ -112,7 +112,7 @@ function tanque.update(dt)
         end
     end
 
-    -- Cooldown de disparo (Código del compañero)
+    -- Cooldown de disparo
     if datos.shootCooldown > 0 then
         datos.shootCooldown = datos.shootCooldown - dt
     end
@@ -198,7 +198,7 @@ function tanque.update(dt)
 end
 
 function tanque.draw()
-    -- No dibujar si está muerto (Código del compañero)
+    -- No dibujar si está muerto
     if datos.isDead then
         return
     end
@@ -207,8 +207,7 @@ function tanque.draw()
         love.graphics.draw(img, x, y, angulo, escala, escala, pivot.x, pivot.y)
     end
 
-    -- Efecto de parpadeo si invulnerable (Código compartido/compañero)
-    -- nota: unimos la lógica de invulnerability de ambos sistemas aquí
+    -- Efecto de parpadeo si invulnerable
     local invuln = datos.invulnerable or (timerInvulnerable > 0)
     local blinkTimer = datos.invulnTimer or timerInvulnerable
     if invuln and math.floor(blinkTimer * 10) % 2 == 0 then
@@ -233,11 +232,11 @@ function tanque.draw()
     local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
     drawSprite(sprites.weapon, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
     love.graphics.setColor(1, 1, 1)
-    -- Barra de vida encima del tanque (Código del compañero)
+    -- Barra de vida encima del tanque
     tanque.drawHealthBar()
 end
 
--- Dibujar barra de vida (Código del compañero)
+-- Dibujar barra de vida
 function tanque.drawHealthBar()
     if datos.isDead then return end
 
@@ -287,7 +286,7 @@ function tanque.getAngles()
     return datos.angulo, datos.anguloTorreta
 end
 
--- comprueba si una bala de bot impacta con el jugador (Wrapper para compatibilidad con Bots)
+-- comprueba si una bala de bot impacta con el jugador
 function tanque.checkHit(bx, by, danio)
     danio = danio or 1
     if datos.isDead or datos.invulnerable or (timerInvulnerable > 0) then return false end
@@ -314,7 +313,7 @@ function tanque.empujar(ex, ey)
     datos.y = datos.y + ey
 end
 
--- SISTEMA DE COMBATE (Código del compañero)
+-- SISTEMA DE COMBATE
 function tanque.takeDamage(damage)
     if datos.isDead or datos.invulnerable then
         return false

@@ -5,6 +5,13 @@
 
 local Game = {}
 
+local leaderboard = require("systems.leaderboard")
+local Minimap     = require("systems.minimap")
+local Perfil      = require("systems.perfil")
+
+-- Contadores de la partida actual
+local stats = { kills = 0, muertes = 0, victoria = false }
+
 -- Los 4 mapas disponibles
 local allMaps = {
     require("systems.maps.map"),
@@ -40,6 +47,7 @@ end
 
 -- Carga (o recarga) el juego con el mapa indicado (1, 2, 3 o 4).
 function Game.load(mapIdx)
+    stats = { kills = 0, muertes = 0, victoria = false }
     recalcView()
     if not gameCanvas then
         gameCanvas = love.graphics.newCanvas(GAME_W, GAME_H)
@@ -47,6 +55,7 @@ function Game.load(mapIdx)
 
     Map = allMaps[mapIdx or 1]
     Map.load()
+    Minimap.load()
     Camera = {x=0, y=0}   -- reiniciar cámara al cargar mapa
 
     -- Usar el primer punto de spawn del mapa para el jugador
@@ -73,6 +82,9 @@ function Game.load(mapIdx)
     Audio.load(mapIdx or 1)
 end
 
+function Game.addKill()   stats.kills   = stats.kills   + 1 end
+function Game.addMuerte() stats.muertes = stats.muertes + 1 end
+
 function Game.update(dt)
     Tank.update(dt)
     Bullet.update(dt)
@@ -84,6 +96,7 @@ function Game.update(dt)
     local tx, ty  = Tank.getPosition()
     Camera.x = math.max(0, math.min(tx - GAME_W/2, mapSize.w - GAME_W))
     Camera.y = math.max(0, math.min(ty - GAME_H/2, mapSize.h - GAME_H))
+    Minimap.update(tx, ty)
 end
 
 function Game.draw()
@@ -104,6 +117,7 @@ function Game.draw()
     Effects.draw()
     Map.drawAbove()
     love.graphics.pop()
+    Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     love.graphics.setCanvas()
 
     -- Escalar el canvas al monitor con letterbox negro
@@ -113,11 +127,22 @@ function Game.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy,
                        0, GameView.scale, GameView.scale)
+
+    Minimap.drawHUD(Camera.x, Camera.y, GameView)
 end
 
 -- onEscape: funcion que main.lua pasa para volver al menu
 function Game.keypressed(key, onEscape)
     if key == "escape" then
+        if Perfil.activo then
+            leaderboard.enviarPartida(
+                Perfil.activo.gamertag,
+                stats.kills,
+                stats.muertes,
+                stats.victoria,
+                "local"
+            )
+        end
         onEscape()
     end
 end

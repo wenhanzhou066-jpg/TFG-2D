@@ -4,6 +4,8 @@
 
 local Perfil = {}
 
+local leaderboard = require("systems.leaderboard")
+
 -- SHA-256 via love.data.hash (LÖVE 11.x incluido)
 local function hashPwd(pw)
     local raw = love.data.hash("sha256", pw)
@@ -74,6 +76,9 @@ function Perfil.registrar(gamertag, password, datos)
         color_b   = datos.colorB or 0.2,
     }
     local ok = love.filesystem.write(rutaPerfil(gamertag), serializar(registro))
+    if ok then
+        leaderboard.registrar(gamertag)
+    end
     return ok, ok and nil or "Error al guardar"
 end
 

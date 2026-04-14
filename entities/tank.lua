@@ -400,6 +400,5 @@ function tanque.shoot()
     datos.shootCooldown = datos.shootDelay
     return true
 end
-end
 
 return tanque

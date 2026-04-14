@@ -23,6 +23,13 @@ local spawns = {
     { x = 1750, y = 900 },  -- SE
 }
 
+local powerupSpawns = {
+    {type="health", x=960,  y=300},   -- Centro norte
+    {type="health", x=960,  y=780},   -- Centro sur
+    {type="ammo",   x=400,  y=540},   -- Oeste centro
+    {type="shield", x=1520, y=540},   -- Este centro
+}
+
 -- ── Constantes de diseño ───────────────────────────────────────
 local RW = 68   -- ancho de carretera
 
@@ -290,6 +297,7 @@ function MapCity.getWalls()   return walls   end
 function MapCity.getRivers()  return rivers  end
 function MapCity.getBridges() return bridges end
 function MapCity.getSpawns()  return spawns  end
+function MapCity.getPowerupSpawns() return powerupSpawns end
 
 function MapCity.bulletHit(x, y)
     for _, w in ipairs(walls) do

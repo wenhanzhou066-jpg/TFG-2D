@@ -74,7 +74,20 @@ function tanque.load(sx, sy)
         radio = r,
         trackTimer = 0,
         isMoving = false,
-        torretaDir = 0,
+        torretaDir = 0,   -- dirección de giro actual: -1, 0 o 1
+        -- Sistema de combate del compañero
+        hp = 100,
+        maxHp = 100,
+        isDead = false,
+        respawnTimer = 0,
+        respawnDelay = 3.0,
+        invulnerable = false,
+        invulnTimer = 0,
+        spawnX = sx or 170,
+        spawnY = sy or 185,
+        -- Cooldown de disparo
+        shootCooldown = 0,
+        shootDelay = 0.3,  -- 0.3s entre disparos
     }
 
     vida = VIDA_MAX
@@ -82,6 +95,28 @@ function tanque.load(sx, sy)
 end
 
 function tanque.update(dt)
+    -- Manejar respawn si está muerto (Código del compañero)
+    if datos.isDead then
+        datos.respawnTimer = datos.respawnTimer - dt
+        if datos.respawnTimer <= 0 then
+            tanque.respawn()
+        end
+        return
+    end
+
+    -- Invulnerabilidad temporal después de respawn (Código del compañero)
+    if datos.invulnerable then
+        datos.invulnTimer = datos.invulnTimer - dt
+        if datos.invulnTimer <= 0 then
+            datos.invulnerable = false
+        end
+    end
+
+    -- Cooldown de disparo (Código del compañero)
+    if datos.shootCooldown > 0 then
+        datos.shootCooldown = datos.shootCooldown - dt
+    end
+
     datos.isMoving = false
     local r = datos.radio
     local nx, ny = datos.x, datos.y
@@ -163,14 +198,24 @@ function tanque.update(dt)
 end
 
 function tanque.draw()
+    -- No dibujar si está muerto (Código del compañero)
+    if datos.isDead then
+        return
+    end
+
     local function drawSprite(img, pivot, angulo, x, y)
         love.graphics.draw(img, x, y, angulo, escala, escala, pivot.x, pivot.y)
     end
 
-    -- parpadeo si es invulnerable (daño reciente)
-    local visible = timerInvulnerable <= 0 or (math.floor(timerInvulnerable * 10) % 2 == 0)
-    if not visible then return end
+    -- Efecto de parpadeo si invulnerable (Código compartido/compañero)
+    -- nota: unimos la lógica de invulnerability de ambos sistemas aquí
+    local invuln = datos.invulnerable or (timerInvulnerable > 0)
+    local blinkTimer = datos.invulnTimer or timerInvulnerable
+    if invuln and math.floor(blinkTimer * 10) % 2 == 0 then
+        return
+    end
 
+    -- orugas (siempre blanco)
     love.graphics.setColor(1, 1, 1)
     drawSprite(sprites.tracks, sprites.tracksPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
@@ -188,14 +233,42 @@ function tanque.draw()
     local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
     drawSprite(sprites.weapon, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
     love.graphics.setColor(1, 1, 1)
+    -- Barra de vida encima del tanque (Código del compañero)
+    tanque.drawHealthBar()
+end
 
-    -- barra de vida
-    local bw = 40
-    love.graphics.setColor(0, 0, 0, 0.6)
-    love.graphics.rectangle("fill", datos.x - bw/2, datos.y - 35, bw, 5)
-    local ratio = vida / VIDA_MAX
-    love.graphics.setColor(1-ratio, ratio, 0)
-    love.graphics.rectangle("fill", datos.x - bw/2, datos.y - 35, bw * ratio, 5)
+-- Dibujar barra de vida (Código del compañero)
+function tanque.drawHealthBar()
+    if datos.isDead then return end
+
+    local barW = 60
+    local barH = 6
+    local barX = datos.x - barW/2
+    local barY = datos.y - 50
+
+    local hpPercent = datos.hp / datos.maxHp
+
+    -- Fondo negro
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", barX-1, barY-1, barW+2, barH+2)
+
+    -- Barra de HP con gradiente de color
+    local r, g, b
+    if hpPercent > 0.6 then
+        r, g, b = 0.2, 0.8, 0.2  -- verde
+    elseif hpPercent > 0.3 then
+        r, g, b = 1.0, 0.8, 0.0  -- amarillo
+    else
+        r, g, b = 1.0, 0.2, 0.2  -- rojo
+    end
+
+    love.graphics.setColor(r, g, b)
+    love.graphics.rectangle("fill", barX, barY, barW * hpPercent, barH)
+
+    -- Borde blanco
+    love.graphics.setColor(1, 1, 1)
+    love.graphics.rectangle("line", barX-1, barY-1, barW+2, barH+2)
+
     love.graphics.setColor(1, 1, 1)
 end
 
@@ -214,38 +287,119 @@ function tanque.getAngles()
     return datos.angulo, datos.anguloTorreta
 end
 
--- comprueba si una bala de bot impacta con el jugador
+-- comprueba si una bala de bot impacta con el jugador (Wrapper para compatibilidad con Bots)
 function tanque.checkHit(bx, by, danio)
     danio = danio or 1
-    if timerInvulnerable > 0 then return false end
+    if datos.isDead or datos.invulnerable or (timerInvulnerable > 0) then return false end
+    
     local dx = bx - datos.x
     local dy = by - datos.y
     if math.sqrt(dx*dx + dy*dy) < datos.radio + 5 then
-        vida = vida - danio
-        timerInvulnerable = TIEMPO_INVULNERABLE
-        if vida <= 0 then
-            vida = 0
-            if Effects and Effects.spawnExplosion then
-                Effects.spawnExplosion(datos.x, datos.y)
-            end
-            if Audio then Audio.explosion() end
-        end
+        tanque.takeDamage(danio)
         return true
     end
     return false
 end
 
 function tanque.getVida()
-    return vida, VIDA_MAX
+    return datos.hp, datos.maxHp
 end
 
 function tanque.estaMuerto()
-    return vida <= 0
+    return datos.isDead
 end
 
 function tanque.empujar(ex, ey)
     datos.x = datos.x + ex
     datos.y = datos.y + ey
+end
+
+-- SISTEMA DE COMBATE (Código del compañero)
+function tanque.takeDamage(damage)
+    if datos.isDead or datos.invulnerable then
+        return false
+    end
+
+    datos.hp = math.max(0, datos.hp - damage)
+
+    -- Efectos visuales
+    if Effects then
+        Effects.shake(5)
+        Effects.spawnDamageNumber(datos.x, datos.y - 30, damage)
+        Effects.spawnFlash(datos.x, datos.y)
+    end
+
+    if datos.hp <= 0 then
+        tanque.die()
+    end
+
+    return true
+end
+
+function tanque.die()
+    datos.isDead = true
+    datos.respawnTimer = datos.respawnDelay
+    datos.velocidad = 0
+
+    -- Explosion grande en posición de muerte
+    if Effects then
+        Effects.spawnExplosion(datos.x, datos.y, "heavy", 64)
+    end
+    if Audio then
+        Audio.explosion()
+    end
+end
+
+function tanque.respawn()
+    datos.isDead = false
+    datos.hp = datos.maxHp
+    datos.x = datos.spawnX
+    datos.y = datos.spawnY
+    datos.angulo = 0
+    datos.anguloTorreta = 0
+    datos.velocidad = 0
+    datos.invulnerable = true
+    datos.invulnTimer = 2.0  -- 2 segundos de invulnerabilidad
+
+    if Effects then
+        Effects.spawnExplosion(datos.x, datos.y, "plasma", 32)
+    end
+end
+
+function tanque.getHP()
+    return datos.hp, datos.maxHp
+end
+
+function tanque.heal(amount)
+    if datos.isDead then return false end
+    datos.hp = math.min(datos.maxHp, datos.hp + amount)
+    return true
+end
+
+function tanque.isDead()
+    return datos.isDead
+end
+
+function tanque.isInvulnerable()
+    return datos.invulnerable
+end
+
+function tanque.getBounds()
+    return datos.x, datos.y, datos.radio
+end
+
+function tanque.canShoot()
+    return not datos.isDead and datos.shootCooldown <= 0
+end
+
+function tanque.shoot()
+    if not tanque.canShoot() then
+        return false
+    end
+
+    datos.shootCooldown = datos.shootDelay
+    return true
+end
 end
 
 return tanque

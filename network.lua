@@ -2,7 +2,7 @@
 -- Cliente UDP simple para juego de tanques multijugador
 
 local socket = require("socket")
-local json = require("systems.json")
+local binary_protocol = require("binary_protocol")
 
 local Red = {}
 Red.udp = nil
@@ -13,6 +13,7 @@ Red.id_jugador = nil
 Red.id_sala = nil  -- ID de sala/lobby actual
 Red.otros_jugadores = {}  -- {id_jugador: {x, y, angulo}}
 Red.balas_recibidas = {}  -- Cola de balas recibidas de otros jugadores
+Red.salas_disponibles = {}  -- Lista de salas del servidor
 Red.tasa_envio = 0.03  -- Enviar actualizaciones cada 30ms (~33 Hz) - Antes: 0.05 (20 Hz)
 Red.temporizador_envio = 0
 Red.update_llamado = false  -- Bandera de debug
@@ -39,18 +40,25 @@ function Red.init(ip_servidor, puerto_servidor)
     return true
 end
 
-function Red.conectar(id_sala)
+function Red.conectar(id_sala, metadata)
     if not Red.udp then
         print("[ERROR] ¡Red no inicializada!")
         return false
     end
 
     Red.id_sala = id_sala or "default"
-    local msg = json.encode({
+    local msg_data = {
         type = "connect",
         room_id = Red.id_sala
-    })
-    print("[DEBUG] Enviando mensaje de conexión a sala '" .. Red.id_sala .. "': " .. msg)
+    }
+
+    -- Agregar metadatos si se proporcionan (al crear sala)
+    if metadata then
+        msg_data.metadata = metadata
+    end
+
+    local msg = binary_protocol.encode(msg_data)
+    print("[DEBUG] Enviando mensaje de conexión binario a sala '" .. Red.id_sala .. "'")
 
     -- Usar send() en vez de sendto() ya que usamos setpeername()
     local enviado, err = Red.udp:send(msg)
@@ -67,21 +75,22 @@ end
 
 function Red.desconectar()
     if Red.udp and Red.conectado then
-        local msg = json.encode({type = "disconnect"})
+        local msg = binary_protocol.encode({type = "disconnect"})
         Red.udp:send(msg)
         Red.conectado = false
         print("[CLIENTE] Desconectado")
     end
 end
 
-function Red.enviar_actualizacion(x, y, angulo)
+function Red.enviar_actualizacion(x, y, angulo, hp)
     if not Red.conectado then return end
 
-    local msg = json.encode({
+    local msg = binary_protocol.encode({
         type = "update",
         x = x,
         y = y,
-        angle = angulo
+        angle = angulo,
+        hp = hp or 100
     })
 
     -- Usar send() ya que usamos setpeername()
@@ -94,7 +103,7 @@ end
 function Red.enviar_bala(x, y, angulo, tipo_bala)
     if not Red.conectado then return end
 
-    local msg = json.encode({
+    local msg = binary_protocol.encode({
         type = "bullet",
         x = x,
         y = y,
@@ -108,7 +117,7 @@ function Red.enviar_bala(x, y, angulo, tipo_bala)
     end
 end
 
-function Red.update(dt, tanque_x, tanque_y, tanque_angulo)
+function Red.update(dt, tanque_x, tanque_y, tanque_angulo, tanque_hp)
     if not Red.udp then return end
 
     -- Debug: mostrar que update está siendo llamado
@@ -120,7 +129,7 @@ function Red.update(dt, tanque_x, tanque_y, tanque_angulo)
     -- Enviar actualizaciones de posición a tasa fija
     Red.temporizador_envio = Red.temporizador_envio + dt
     if Red.temporizador_envio >= Red.tasa_envio then
-        Red.enviar_actualizacion(tanque_x, tanque_y, tanque_angulo)
+        Red.enviar_actualizacion(tanque_x, tanque_y, tanque_angulo, tanque_hp)
         Red.temporizador_envio = 0
     end
 
@@ -147,14 +156,13 @@ function Red.recibir()
         end
 
         contador_mensajes = contador_mensajes + 1
-        print("[DEBUG] Datos recibidos: " .. datos)
+        print("[DEBUG] Mensaje binario recibido (" .. #datos .. " bytes)")
 
-        local exito, msg = pcall(json.decode, datos)
-        if exito then
+        local msg, err = binary_protocol.decode(datos)
+        if msg then
             Red.manejar_mensaje(msg)
         else
-            print("[ERROR] Fallo al decodificar JSON: " .. datos)
-            print("[ERROR] Error de decodificación: " .. tostring(msg))
+            print("[ERROR] Fallo al decodificar mensaje binario: " .. tostring(err))
         end
     end
 
@@ -187,7 +195,8 @@ function Red.manejar_mensaje(msg)
                 Red.otros_jugadores[id_jugador] = {
                     x = datos_j.x,
                     y = datos_j.y,
-                    angulo = datos_j.angle
+                    angulo = datos_j.angle,
+                    hp = datos_j.hp or 100
                 }
             end
         end
@@ -204,9 +213,38 @@ function Red.manejar_mensaje(msg)
             print("[CLIENTE] Bala recibida de jugador " .. msg.player_id)
         end
 
+    elseif tipo_msg == "rooms_list" then
+        -- Lista de salas disponibles
+        Red.salas_disponibles = msg.rooms or {}
+        print("[CLIENTE] Recibida lista de " .. #Red.salas_disponibles .. " salas")
+
     else
         print("[CLIENTE] Tipo de mensaje desconocido: " .. tostring(tipo_msg))
     end
+end
+
+-- Solicitar lista de salas disponibles
+function Red.solicitar_lista_salas()
+    if not Red.udp then
+        print("[ERROR] ¡Red no inicializada!")
+        return false
+    end
+
+    local msg = binary_protocol.encode({ type = "list_rooms" })
+    local enviado, err = Red.udp:send(msg)
+
+    if not enviado and err then
+        print("[AVISO] Error al solicitar lista: " .. err)
+        return false
+    end
+
+    print("[CLIENTE] Solicitando lista de salas...")
+    return true
+end
+
+-- Obtener lista de salas
+function Red.obtener_salas()
+    return Red.salas_disponibles
 end
 
 function Red.obtener_otros_jugadores()

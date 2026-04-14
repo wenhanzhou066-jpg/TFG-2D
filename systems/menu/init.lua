@@ -1,65 +1,60 @@
 -- Router del menu: gestiona que pantalla esta activa y enruta los eventos
 
 local Settings = require("systems.settings")
-local UI = require("systems.ui")
-local Audio = require("systems.audio")
+local UI       = require("systems.ui")
+local Audio    = require("systems.audio")
 
--- Cargamos todas las pantallas del menu
 local pantallas = {
-    principal = require("systems.menu.principal"),
-    jugar = require("systems.menu.jugar"),
-    mapas = require("systems.menu.mapas"),
+    principal    = require("systems.menu.principal"),
+    jugar        = require("systems.menu.jugar"),
+    mapas        = require("systems.menu.mapas"),
     multijugador = require("systems.menu.multijugador"),
-    lobby = require("systems.menu.lobby"),
-    dificultad = require("systems.menu.dificultad"),
+    lobby        = require("systems.menu.lobby"),
     personalizar = require("systems.menu.personalizar"),
-    ranking = require("systems.menu.ranking"),
-    configuracion = require("systems.menu.configuracion"),
+    ranking      = require("systems.menu.ranking"),
+    configuracion= require("systems.menu.configuracion"),
+    menu_oleadas = require("systems.menu.menu_oleadas"),
+    practicar    = require("systems.menu.practicar"),
 }
 
 local Menu = {}
 
--- Estado interno del menu
-local estado = "principal"
+local estado   = "principal"
 local historial = {}
-local accion = nil
-local tiempo = 0
+local accion   = nil
+local tiempo   = 0
 local musica, botonImg, botonExitImg, tituloImg, fondos
 
--- Navega a una nueva pantalla guardando la anterior en el historial
 local function navegarA(nuevoEstado)
     table.insert(historial, estado)
     estado = nuevoEstado
 end
 
--- Vuelve a la pantalla anterior del historial
 local function volver()
     estado = table.remove(historial) or "principal"
 end
 
--- Guarda una accion pendiente para que Game.lua la lea
 local function setAccion(a)
     accion = a
 end
 
--- Escena: objeto que pasamos a cada pantalla para que puedan comunicarse
 local escena = {
-    navegarA = navegarA,
-    volver = volver,
-    setAction = setAccion,
-    getMusica = function() return musica end,
-    getTiempo = function() return tiempo end,
-    botonImg = function() return botonImg end,
+    navegarA     = navegarA,
+    volver       = volver,
+    setAction    = setAccion,
+    getMusica    = function() return musica end,
+    getTiempo    = function() return tiempo end,
+    botonImg     = function() return botonImg end,
     botonExitImg = function() return botonExitImg end,
-    tituloImg = function() return tituloImg end,
-    fondos = function() return fondos end,
+    tituloImg    = function() return tituloImg end,
+    fondos       = function() return fondos end,
 }
 
 function Menu.load()
-    accion = nil
-    estado = "principal"
+    accion   = nil
+    estado   = "principal"
     historial = {}
-    tiempo = 0
+    tiempo   = 0
 
     UI.loadFonts()
     Settings.cargar()
@@ -75,12 +70,10 @@ function Menu.load()
     musica:setVolume(Settings.volumen)
     love.audio.play(musica)
 
-    -- Sprites
-    botonImg = love.graphics.newImage("assets/menu/boton_normal.png")
+    botonImg     = love.graphics.newImage("assets/menu/boton_normal.png")
     botonExitImg = love.graphics.newImage("assets/menu/boton_salir.png")
-    tituloImg = love.graphics.newImage("assets/menu/titulo_panel.png")
+    tituloImg    = love.graphics.newImage("assets/menu/titulo_panel.png")
 
-    -- Filtro nearest
     botonImg:setFilter("nearest", "nearest")
     botonExitImg:setFilter("nearest", "nearest")
     tituloImg:setFilter("nearest", "nearest")
@@ -131,7 +124,7 @@ end
 
 function Menu.textinput(t)
     local p = pantallas[estado]
-    if p and p.textinput then p.textinput(t) end
+    if p and p.textinput then p.textinput(t, escena) end
 end
 
 function Menu.resize()

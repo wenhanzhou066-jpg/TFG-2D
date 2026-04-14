@@ -1,16 +1,14 @@
 -- Submenu de modos de juego
-
 local Base = require("systems.menu.base")
 
 local Jugar = {}
 local opcion = 1
+
 local items = {
-    { "Elegir mapa", "Choose map", ">mapas"},
-    { "Oleadas", "Waves"},
-    { "Cooperativo", "Cooperative"},
+    { "Oleadas", "Waves", ">menu_oleadas" },
+    { "Practicar con bots", "Practice with bots", ">practicar" },
     { "Multijugador", "Multiplayer", ">multijugador" },
-    { "Practicar con bots", "Practice with bots",  ">dificultad"  },
-    { "Volver", "Back", "back"},
+    { "Volver", "Back", "back" },
 }
 
 function Jugar.load(escena)

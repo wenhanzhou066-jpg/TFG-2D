@@ -189,7 +189,12 @@ function Bullet.update(dt)
             end
             destroyed = true
 
-<<<<<<< HEAD
+        -- Colision con Bots (Tu sistema IA)
+        elseif b.owner == "player" and Bot then
+            if Bot.checkHit(b.x, b.y, b.damage) then
+                destroyed = true
+            end
+
         -- Colision con otros tanques (multiplayer, solo balas propias para visual feedback)
         elseif b.spawnTime > 0.1 and b.ownerId == "local" then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius)
@@ -204,21 +209,9 @@ function Bullet.update(dt)
                     GameMultiplayer.damageOtherTank(pid, b.damage)
                 end
 
-=======
-        -- Colision con Bots (Tu sistema IA)
-        elseif b.owner == "player" and Bot then
-            if Bot.checkHit(b.x, b.y, b.damage) then
->>>>>>> cdab3760b76b137e3e2b0b3c6c5f16bc6fb895ed
                 destroyed = true
             end
 
-        -- Colision con otros tanques (Multiplayer - Código del compañero)
-        elseif b.spawnTime > 0.1 and b.ownerId == "local" then
-            local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
-            if hit then
-                destroyed = true
-            end
-        
         -- Vida agotada
         elseif b.life <= 0 then
             destroyed = true

@@ -30,12 +30,12 @@ local accion   = nil
 local tiempo   = 0
 local musica, botonImg, botonExitImg, tituloImg, fondos
 
--- Navega a una nueva pantalla guardando la anterior en el historial (Código compartido)
+-- Navega a una nueva pantalla guardando la anterior en el historial
 local function navegarA(nuevoEstado, params)
     table.insert(historial, estado)
     estado = nuevoEstado
 
-    -- Pantallas que necesitan recargarse al navegar (Código del compañero)
+    -- Pantallas que necesitan recargarse al navegar 
     local needsReload = {
         room_config = true,
         room_browser = true,

@@ -13,7 +13,7 @@ GameMultiplayer = nil
 local sprites = {}
 local spritesLoaded = false
 local active = {}
-local inactive = {} -- Pool de balas inactivas (Código del compañero)
+local inactive = {} -- Pool de balas inactivas
 local count  = 0
 local SPEED      = 600
 local LIFE       = 2.5
@@ -23,7 +23,7 @@ local Bot = nil
 local opponentChecker = nil  -- funcion(bx,by) para colision contra rival online
 local playerShellKey = "light"
 
--- Tipos de balas (Código del compañero)
+-- Tipos de balas
 local BulletTypes = {
     light =   { speed = 600, life = 2.5, damage = 10, radius = 5, trail = false },
     medium =  { speed = 700, life = 2.0, damage = 20, radius = 7, trail = false },
@@ -75,7 +75,7 @@ function Bullet.load()
     count  = 0
 end
 
--- Crea una bala nueva o reutiliza una del pool (Código del compañero)
+-- Crea una bala nueva o reutiliza una del pool
 local function createBullet(x, y, angle, tipo, ownerId, ownerType, damage)
     local t = BulletTypes[tipo] or BulletTypes.light
     local sprite = sprites[tipo] or sprites["light"]
@@ -116,7 +116,7 @@ function Bullet.spawn(x, y, angle, tipo, owner, damage)
     active[count] = b
 end
 
--- Chequea colision bala-tanque circular (Código del compañero)
+-- Chequea colision bala-tanque circular
 local function checkTankHit(bx, by, bradius)
     local Tank = require("entities.tank") -- cargamos aquí para evitar circulares
     if not Tank or not Tank.getPosition then return false end
@@ -132,7 +132,7 @@ local function checkTankHit(bx, by, bradius)
     return distSq < sumRadius*sumRadius
 end
 
--- Chequea colision con otros tanques (multiplayer - Código del compañero)
+-- Chequea colision con otros tanques (multiplayer
 local function checkOtherTanksHit(bx, by, bradius)
     if not GameMultiplayer or not GameMultiplayer.getOtherTanks then
         return false, nil
@@ -176,11 +176,11 @@ function Bullet.update(dt)
 
         local destroyed = false
 
-        -- Colision con mapa (Código del compañero)
+        -- Colision con mapa
         if Map.bulletHit(b.x, b.y, b.radius or 5) then
             destroyed = true
         
-        -- Colision con Tanque Local (Código del compañero + compatibilidad)
+        -- Colision con Tanque Local
         elseif b.spawnTime > 0.05 and b.ownerId ~= "local" and checkTankHit(b.x, b.y, b.radius or 5) then
             if Tank and Tank.takeDamage then
                 Tank.takeDamage(b.damage)
@@ -195,7 +195,7 @@ function Bullet.update(dt)
                 destroyed = true
             end
 
-        -- Colision con otros tanques (Multiplayer - Código del compañero)
+        -- Colision con otros tanques (Multiplayer)
         elseif b.spawnTime > 0.1 and b.ownerId == "local" then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
             if hit then
@@ -211,7 +211,7 @@ function Bullet.update(dt)
             Effects.spawnExplosion(b.x, b.y, b.type, b.radius)
             if Audio then Audio.explosion() end
             
-            -- Pool Logic (Código del compañero)
+            -- Pool Logic 
             table.insert(inactive, b)
             active[i] = active[count]
             active[count] = nil

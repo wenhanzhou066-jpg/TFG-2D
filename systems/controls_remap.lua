@@ -195,13 +195,13 @@ function Remap.draw()
     love.graphics.setColor(0.10, 0.22, 0.40, 0.85)
     love.graphics.rectangle("fill", COL1_X, hdrY, COL_W - 20, 34, 6, 6)
     love.graphics.setColor(0.3, 0.8, 1.0)
-    love.graphics.printf("🎮  JUGADOR 1", COL1_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
+    love.graphics.printf("JUGADOR 1", COL1_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
 
     -- Fondo cabecera J2
     love.graphics.setColor(0.35, 0.18, 0.05, 0.85)
     love.graphics.rectangle("fill", COL2_X, hdrY, COL_W - 20, 34, 6, 6)
     love.graphics.setColor(1.0, 0.65, 0.2)
-    love.graphics.printf("🎮  JUGADOR 2", COL2_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
+    love.graphics.printf("JUGADOR 2", COL2_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
 
     -- Separador vertical entre columnas
     love.graphics.setColor(0.25, 0.55, 1.0, 0.25)
@@ -272,7 +272,7 @@ function Remap.draw()
         love.graphics.setColor(1.0, 0.35, 0.35, alpha)
         love.graphics.rectangle("line", emX, emY, emW, 32, 6, 6)
         love.graphics.setColor(1, 0.90, 0.90, alpha)
-        love.graphics.printf("⚠  " .. errorMsg, emX, emY + (32 - lineH) / 2, emW, "center")
+        love.graphics.printf("" .. errorMsg, emX, emY + (32 - lineH) / 2, emW, "center")
     end
 
     -- ── Botones ──
@@ -290,7 +290,7 @@ function Remap.draw()
     love.graphics.setColor(0.35, 0.75, 0.40)
     love.graphics.rectangle("line", ax, ay, aw, ah, 8, 8)
     love.graphics.setColor(0.75, 1.0, 0.78)
-    love.graphics.printf("✓  Aceptar", ax, ay + (ah - lineH) / 2, aw, "center")
+    love.graphics.printf("Aceptar", ax, ay + (ah - lineH) / 2, aw, "center")
 
     love.graphics.setColor(1, 1, 1)
 end

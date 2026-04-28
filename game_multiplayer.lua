@@ -5,8 +5,10 @@ local GameMultiplayer = {}
 
 local leaderboard = require("systems.leaderboard")
 local Perfil      = require("systems.perfil")
+local Pausa       = require("systems.pausa")
 
 local stats = { kills = 0, muertes = 0, victoria = false }
+local pausado = false
 
 local Red = require("network")
 
@@ -66,10 +68,19 @@ function GameMultiplayer.getOtherTanks()
 end
 
 -- Aplicar daño predictivo local a otro tanque (para feedback visual inmediato)
+-- Retorna true si mata al tanque
 function GameMultiplayer.damageOtherTank(pid, damage)
     if otherTanks[pid] then
-        otherTanks[pid].hp = math.max(0, otherTanks[pid].hp - damage)
+        local oldHp = otherTanks[pid].hp
+        otherTanks[pid].hp = math.max(0, oldHp - damage)
+
+        -- Checar si murió
+        if oldHp > 0 and otherTanks[pid].hp <= 0 then
+            Effects.spawnExplosion(otherTanks[pid].x, otherTanks[pid].y, "tank", 40)
+            return true  -- Kill confirmado
+        end
     end
+    return false
 end
 
 -- Mostrar notificación de powerup recogido
@@ -138,11 +149,20 @@ function GameMultiplayer.load(mapIdx)
 
     Audio.load(mapIdx or 1)
 
+    -- Cargar menu pausa
+    Pausa.load()
+    pausado = false
+
     -- La red ya está inicializada desde el lobby
     print("[MULTIPLAYER] Juego iniciado")
 end
 
 function GameMultiplayer.update(dt)
+    if pausado then
+        Pausa.update(dt)
+        return
+    end
+
     -- Actualizar tanque local
     Tank.update(dt)
     Bullet.update(dt)
@@ -272,6 +292,11 @@ function GameMultiplayer.draw()
     love.graphics.setCanvas()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
+
+    -- Dibujar menu pausa encima
+    if pausado then
+        Pausa.draw()
+    end
 end
 
 function GameMultiplayer.drawOtherTanks()
@@ -380,13 +405,16 @@ function GameMultiplayer.drawHUD()
     local myId = Red.id_jugador or "?"
     love.graphics.print("MULTIJUGADOR | Tu ID: " .. myId .. " | Jugadores: " .. playerCount, 10, 10)
 
+    -- Stats K/D
+    love.graphics.print(string.format("Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 30)
+
     -- Debug info
     local tx, ty = Tank.getPosition()
-    love.graphics.print(string.format("Mi pos: (%.0f, %.0f) | Conectado: %s",
-        tx, ty, Red.esta_conectado() and "SI" or "NO"), 10, 30)
+    love.graphics.print(string.format("Pos: (%.0f, %.0f) | Conectado: %s",
+        tx, ty, Red.esta_conectado() and "SI" or "NO"), 10, 50)
 
-    -- Listar otros tanques
-    local y = 50
+    -- Listar otros tanques (debug)
+    local y = 70
     for pid, tank in pairs(otherTanks) do
         love.graphics.print(string.format("  P%d: (%.0f, %.0f)", pid, tank.x, tank.y), 10, y)
         y = y + 20
@@ -425,27 +453,76 @@ function GameMultiplayer.drawHUD()
 end
 
 function GameMultiplayer.keypressed(key, goMenu)
-    if key == "escape" then
-        if Perfil.activo then
-            leaderboard.enviarPartida(
-                Perfil.activo.gamertag,
-                stats.kills,
-                stats.muertes,
-                stats.victoria,
-                "multi"
-            )
+    if pausado then
+        Pausa.keypressed(key)
+        local accion = Pausa.getAccion()
+
+        if accion == "reanudar" then
+            pausado = false
+        elseif accion == "reiniciar" then
+            -- No permitir reinicio en multijugador, solo reanudar
+            pausado = false
+        elseif accion == "menu" then
+            if Perfil.activo then
+                leaderboard.enviarPartida(
+                    Perfil.activo.gamertag,
+                    stats.kills,
+                    stats.muertes,
+                    stats.victoria,
+                    "multi"
+                )
+            end
+            Red.desconectar()
+            pausado = false
+            goMenu()
         end
-        Red.desconectar()
-        goMenu()
+        return
+    end
+
+    if key == "escape" then
+        pausado = true
+        Pausa.open()
     end
 end
 
-function GameMultiplayer.mousepressed(x, y, button)
+function GameMultiplayer.mousepressed(x, y, button, goMenu)
+    if pausado then
+        Pausa.mousepressed(x, y, button)
+        local accion = Pausa.getAccion()
+
+        if accion == "reanudar" then
+            pausado = false
+        elseif accion == "reiniciar" then
+            -- No permitir reinicio en multijugador, solo reanudar
+            pausado = false
+        elseif accion == "menu" then
+            if Perfil.activo then
+                leaderboard.enviarPartida(
+                    Perfil.activo.gamertag,
+                    stats.kills,
+                    stats.muertes,
+                    stats.victoria,
+                    "multi"
+                )
+            end
+            Red.desconectar()
+            pausado = false
+            if goMenu then goMenu() end
+        end
+        return
+    end
+
     if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
         Bullet.spawn(bx, by, angle, "light", "local")
         Effects.spawnSmoke(bx, by, angle)
         Red.enviar_bala(bx, by, angle, "light")
+    end
+end
+
+function GameMultiplayer.mousemoved(x, y)
+    if pausado then
+        Pausa.mousemoved(x, y)
     end
 end
 

@@ -150,15 +150,22 @@ function GameServer:handle_connect(data, ip, port, addr_key)
     -- Crear room si no existe
     if not self.rooms[room_id] then
         self.rooms[room_id] = Room.new(room_id, metadata)
-        print(string.format("[ROOM] Created '%s'", room_id))
+        print(string.format("[ROOM] Created '%s' (mode: %s, max: %d)",
+            room_id,
+            metadata and metadata.game_mode or "default",
+            metadata and metadata.max_players or 8))
     end
 
     local room = self.rooms[room_id]
     local player_id = room:add_client(addr_key)
     self.addr_to_room[addr_key] = room_id
 
-    print(string.format("[CONNECT] Player %d joined room '%s' from %s:%d",
-        player_id, room_id, ip, port))
+    -- Contar jugadores en sala
+    local count = 0
+    for _ in pairs(room.clients) do count = count + 1 end
+
+    print(string.format("[CONNECT] Player %d joined room '%s' from %s:%d (total in room: %d)",
+        player_id, room_id, ip, port, count))
 
     -- Enviar welcome
     local response = binary_protocol.encode({
@@ -310,6 +317,7 @@ local server = GameServer.new()
 
 print("[SERVER] Press Ctrl+C to stop")
 print("[SERVER] Waiting for connections...")
+print("[DEBUG] Rooms are ISOLATED - players only see others in same room_id")
 
 local success, err = pcall(function()
     server:run()

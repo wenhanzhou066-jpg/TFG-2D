@@ -102,16 +102,17 @@ function love.keypressed(key)
 end
 
 function love.mousemoved(x, y)
-    if     escena == "menu"    then Menu.mousemoved(x, y)
-    elseif escena == "oleadas" then GameOleadas.mousemoved(x, y)
-    elseif escena == "bots"    then GameBots.mousemoved(x, y)
+    if     escena == "menu"        then Menu.mousemoved(x, y)
+    elseif escena == "multiplayer" then GameMultiplayer.mousemoved(x, y)
+    elseif escena == "oleadas"     then GameOleadas.mousemoved(x, y)
+    elseif escena == "bots"        then GameBots.mousemoved(x, y)
     end
 end
 
 function love.mousepressed(x, y, button)
     if     escena == "menu"        then Menu.mousepressed(x, y, button)
     elseif escena == "juego"       then Game.mousepressed(x, y, button)
-    elseif escena == "multiplayer" then GameMultiplayer.mousepressed(x, y, button)
+    elseif escena == "multiplayer" then GameMultiplayer.mousepressed(x, y, button, goMenu)
     elseif escena == "oleadas"     then GameOleadas.mousepressed(x, y, button)
     elseif escena == "bots"        then GameBots.mousepressed(x, y, button)
     end

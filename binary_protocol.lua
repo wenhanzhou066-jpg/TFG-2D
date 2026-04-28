@@ -24,7 +24,7 @@ local function unpack_byte(data, offset)
 end
 
 local function pack_short(value)
-    -- 2 bytes unsigned (0-65535)
+    -- 2 bytes sin signo (0-65535)
     local b1 = math.floor(value / 256) % 256
     local b2 = value % 256
     return string.char(b1, b2)

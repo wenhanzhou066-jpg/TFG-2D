@@ -203,6 +203,15 @@ function Bullet.update(dt)
         -- 3. Colisión con otros tanques (Multiplayer)
         if not destroyed and b.ownerId == "local" then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
+        -- Colision con Bots
+        elseif b.owner == "player" and Bot then
+            if Bot.checkHit(b.x, b.y, b.damage) then
+                destroyed = true
+            end
+
+        -- Colision con otros tanques (multiplayer, solo balas propias para visual feedback)
+        elseif b.spawnTime > 0.1 and b.ownerId == "local" then
+            local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius)
             if hit then
                 -- Feedback visual inmediato e intuitivo
                 Effects.spawnExplosion(hitx or b.x, hity or b.y, b.type, b.radius)

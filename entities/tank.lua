@@ -423,6 +423,12 @@ function tanque.die(id)
     if Audio then
         Audio.explosion()
     end
+
+    -- Notificar muerte a modo multijugador
+    if _G.GameMultiplayer and _G.GameMultiplayer.addMuerte then
+        _G.GameMultiplayer.addMuerte()
+        print("[DEATH] You died - deaths tracked")
+    end
 end
 
 function tanque.respawn(id)

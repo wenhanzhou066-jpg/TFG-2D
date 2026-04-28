@@ -12,9 +12,9 @@ local PowerupTypes = {
         color = {0.2, 1.0, 0.2},
         radius = 20,
         duration = 0,  -- Instantáneo
-        effect = function()
+        effect = function(id)
             if Tank and Tank.heal then
-                Tank.heal(30)
+                Tank.heal(30, id)
             end
         end
     },
@@ -100,17 +100,21 @@ function Powerup.update(dt)
             -- Animación de flotación
             p.bobTimer = p.bobTimer + dt
 
-            -- Colisión con tanque del jugador
-            if Tank and Tank.getBounds and not Tank.isDead() then
-                local tx, ty, tr = Tank.getBounds()
-                local dx = p.x - tx
-                local dy = p.y - ty
-                local distSq = dx*dx + dy*dy
-                local sumRadius = p.radius + tr
+            -- Colisión con tanques locales
+            if Tank and Tank.getTanks then
+                for tid, datos in pairs(Tank.getTanks()) do
+                    if not datos.isDead then
+                        local dx = p.x - datos.x
+                        local dy = p.y - datos.y
+                        local distSq = dx*dx + dy*dy
+                        local sumRadius = p.radius + datos.radio
 
-                if distSq < sumRadius*sumRadius then
-                    -- Recoger power-up
-                    Powerup.collect(i)
+                        if distSq < sumRadius*sumRadius then
+                            -- Recoger power-up
+                            Powerup.collect(i, tid)
+                            break
+                        end
+                    end
                 end
             end
         end
@@ -118,13 +122,13 @@ function Powerup.update(dt)
 end
 
 -- Recoger power-up
-function Powerup.collect(index)
+function Powerup.collect(index, id)
     local p = active[index]
     if p.collected then return end
 
     local pType = PowerupTypes[p.tipo]
     if pType.effect then
-        pType.effect()
+        pType.effect(id)
     end
 
     p.collected = true

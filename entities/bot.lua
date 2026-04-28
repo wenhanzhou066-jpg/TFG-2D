@@ -14,8 +14,8 @@ local ESCALA = 0.3
 local DIFICULTADES = {
     {
         nombre = "Facil",
-        cantidadBots = 3,
-        vida = 2,
+        cantidadBots = 5,
+        vida = 20,
         velPatrulla = 65,
         velPersecucion = 85,
         cooldownDisparo = 2.5,
@@ -33,8 +33,8 @@ local DIFICULTADES = {
     },
     {
         nombre = "Normal",
-        cantidadBots = 4,
-        vida = 3,
+        cantidadBots = 7,
+        vida = 30,
         velPatrulla = 100,
         velPersecucion = 135,
         cooldownDisparo = 1.4,
@@ -52,8 +52,8 @@ local DIFICULTADES = {
     },
     {
         nombre = "Dificil",
-        cantidadBots = 5,
-        vida = 5,
+        cantidadBots = 10,
+        vida = 50,
         velPatrulla = 125,
         velPersecucion = 175,
         cooldownDisparo = 0.75,
@@ -129,24 +129,45 @@ local function cargarSprites()
     spritesLoaded = true
 end
 
-local function calcularPosicionesSpawn(cantidad)
+local function calcularPosicionesSpawn(cantidad, radio)
     local lista = {}
     local mw, mh = 1920, 1080
     if Map and Map.getSize then local sz = Map.getSize(); mw = sz.w; mh = sz.h end
     local spawns = (Map and Map.getSpawns) and Map.getSpawns() or {}
+    radio = radio or 20
+
     for i = 1, cantidad do
         local sx, sy
-        if #spawns > 1 then
-            -- empezar desde spawn 2 para no coincidir con el jugador (spawn 1)
-            local sp = spawns[((i-1) % (#spawns-1)) + 2]
-            local ox = (math.random()-0.5) * 180
-            local oy = (math.random()-0.5) * 180
-            sx = math.max(100, math.min(mw-100, sp.x + ox))
-            sy = math.max(100, math.min(mh-100, sp.y + oy))
-        else
-            sx = math.random(100, mw-100)
-            sy = math.random(100, mh-100)
+        local sp = (#spawns > 1) and spawns[((i-1) % (#spawns-1)) + 2] or {x = mw/2, y = mh/2}
+        
+        -- Intentar encontrar un punto libre cerca del spawn
+        local encontrado = false
+        local intentos = 0
+        local radioBusqueda = 150
+        
+        while not encontrado and intentos < 30 do
+            intentos = intentos + 1
+            local ox = (math.random() - 0.5) * radioBusqueda
+            local oy = (math.random() - 0.5) * radioBusqueda
+            local tx = math.max(radio + 10, math.min(mw - radio - 10, sp.x + ox))
+            local ty = math.max(radio + 10, math.min(mh - radio - 10, sp.y + oy))
+            
+            if not Colision.isBlocked(tx, ty, radio) then
+                sx, sy = tx, ty
+                encontrado = true
+            else
+                -- Si no encontramos, ampliamos el rango de búsqueda ligeramente
+                radioBusqueda = radioBusqueda + 20
+            end
         end
+        
+        -- Si después de muchos intentos no encontramos sitio libre, usamos el punto del spawn puro
+        -- (o el último punto calculado) para no bloquear el juego
+        if not encontrado then
+            sx = sp.x
+            sy = sp.y
+        end
+        
         lista[i] = {x = sx, y = sy}
     end
     return lista
@@ -191,7 +212,7 @@ function Bot.load()
     cargarSprites()
     local r = math.floor(sprites.casco:getWidth() * ESCALA / 2 * 0.75)
     bots = {}
-    local posiciones = calcularPosicionesSpawn(dif.cantidadBots)
+    local posiciones = calcularPosicionesSpawn(dif.cantidadBots, r)
     for i = 1, dif.cantidadBots do
         bots[i] = crearBot(posiciones[i].x, posiciones[i].y, r)
     end
@@ -218,7 +239,7 @@ function Bot.spawnOleada(config)
     }
     local r = math.floor(sprites.casco:getWidth() * ESCALA / 2 * 0.75)
     bots = {}
-    local posiciones = calcularPosicionesSpawn(config.botCount)
+    local posiciones = calcularPosicionesSpawn(config.botCount, r)
     for i = 1, config.botCount do
         bots[i] = crearBot(posiciones[i].x, posiciones[i].y, r)
     end
@@ -231,15 +252,28 @@ end
 local prevJx, prevJy, velJx, velJy = 0, 0, 0, 0
 
 function Bot.update(dt)
-    local jx, jy = Tank.getPosition()
+    local tgts = {}
+    if #objetivos > 0 then
+        tgts = objetivos
+    else
+        local allTanks = Tank.getTanks()
+        for _, tn in pairs(allTanks) do
+            if not tn.isDead then
+                table.insert(tgts, {x=tn.x, y=tn.y})
+            end
+        end
+        if #tgts == 0 then
+            local jx, jy = Tank.getPosition()
+            table.insert(tgts, {x=jx, y=jy})
+        end
+    end
 
+    local jx, jy = tgts[1].x, tgts[1].y
     if prevJx ~= 0 and dt > 0 then
         velJx = (jx - prevJx) / dt
         velJy = (jy - prevJy) / dt
     end
     prevJx, prevJy = jx, jy
-
-    local tgts = (#objetivos > 0) and objetivos or { {x=jx, y=jy} }
 
     for _, b in ipairs(bots) do
         if not b.vivo then goto continuar end

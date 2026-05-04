@@ -23,9 +23,11 @@ local PowerupTypes = {
         color = {1.0, 0.8, 0.2},
         radius = 20,
         duration = 10,  -- 10 segundos
-        effect = function()
-            -- TODO: implementar sistema de munición
-            print("[POWERUP] Ammo recogido")
+        effect = function(id)
+            if Tank and Tank.applyAmmoBoost then
+                Tank.applyAmmoBoost(10, id)
+                print("[POWERUP] Ammo boost activado - disparo rápido")
+            end
         end
     },
     shield = {
@@ -33,9 +35,11 @@ local PowerupTypes = {
         color = {0.3, 0.5, 1.0},
         radius = 20,
         duration = 8,  -- 8 segundos
-        effect = function()
-            -- TODO: implementar escudo temporal
-            print("[POWERUP] Escudo activado")
+        effect = function(id)
+            if Tank and Tank.applyShield then
+                Tank.applyShield(8, id)
+                print("[POWERUP] Escudo activado - invulnerable")
+            end
         end
     },
     speed = {
@@ -43,9 +47,11 @@ local PowerupTypes = {
         color = {1.0, 0.3, 1.0},
         radius = 20,
         duration = 5,  -- 5 segundos
-        effect = function()
-            -- TODO: implementar boost de velocidad
-            print("[POWERUP] Speed boost activado")
+        effect = function(id)
+            if Tank and Tank.applySpeedBoost then
+                Tank.applySpeedBoost(5, id)
+                print("[POWERUP] Speed boost activado - 50% más rápido")
+            end
         end
     }
 }
@@ -154,6 +160,8 @@ end
 
 -- Dibujar power-ups
 function Powerup.draw()
+    local font = love.graphics.getFont()
+
     for _, p in ipairs(active) do
         if not p.collected then
             local pType = PowerupTypes[p.tipo]
@@ -176,12 +184,13 @@ function Powerup.draw()
                 -- Borde blanco
                 love.graphics.setColor(1, 1, 1)
                 love.graphics.circle("line", p.x, p.y + bobOffset, p.radius)
-            end
 
-            -- Icono de tipo (letra)
-            love.graphics.setColor(1, 1, 1)
-            local label = string.upper(string.sub(p.tipo, 1, 1))
-            love.graphics.print(label, p.x - 5, p.y + bobOffset - 8)
+                -- Icono de tipo (letra centrada)
+                local label = string.upper(string.sub(p.tipo, 1, 1))
+                local textWidth = font:getWidth(label)
+                local textHeight = font:getHeight()
+                love.graphics.print(label, p.x - textWidth/2, p.y + bobOffset - textHeight/2)
+            end
         end
     end
     love.graphics.setColor(1, 1, 1)

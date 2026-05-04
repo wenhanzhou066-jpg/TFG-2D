@@ -74,6 +74,7 @@ local function createTankData(sx, sy)
         velocidad = 0,
         aceleracion = 300,
         velMax = 150,
+        velMaxBase = 150,  -- Velocidad base (para speed boost)
         friccion = 200,
         radio = r,
         trackTimer = 0,
@@ -90,6 +91,10 @@ local function createTankData(sx, sy)
         spawnY = sy or 185,
         shootCooldown = 0,
         shootDelay = 0.3,
+        shootDelayBase = 0.3,  -- Cooldown base (para ammo boost)
+        -- Powerups activos
+        speedBoostTimer = 0,
+        ammoBoostTimer = 0,
     }
 end
 
@@ -137,6 +142,23 @@ function tanque.update(dt)
                 datos.invulnTimer = datos.invulnTimer - dt
                 if datos.invulnTimer <= 0 then
                     datos.invulnerable = false
+                end
+            end
+
+            -- Actualizar timers de powerups
+            if datos.speedBoostTimer > 0 then
+                datos.speedBoostTimer = datos.speedBoostTimer - dt
+                if datos.speedBoostTimer <= 0 then
+                    -- Restaurar velocidad normal
+                    datos.velMax = datos.velMaxBase
+                end
+            end
+
+            if datos.ammoBoostTimer > 0 then
+                datos.ammoBoostTimer = datos.ammoBoostTimer - dt
+                if datos.ammoBoostTimer <= 0 then
+                    -- Restaurar cooldown normal
+                    datos.shootDelay = datos.shootDelayBase
                 end
             end
 
@@ -286,6 +308,23 @@ function tanque.draw()
                 local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
                 local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
                 drawSprite(weaponSprite, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
+
+                -- Indicadores visuales de powerups activos
+                if datos.speedBoostTimer > 0 then
+                    -- Aura magenta para speed boost
+                    local pulse = math.sin(love.timer.getTime() * 10) * 0.3 + 0.7
+                    love.graphics.setColor(1, 0.3, 1, 0.3 * pulse)
+                    love.graphics.circle("line", datos.x, datos.y, datos.radio + 10, 32)
+                    love.graphics.circle("line", datos.x, datos.y, datos.radio + 15, 32)
+                end
+
+                if datos.ammoBoostTimer > 0 then
+                    -- Aura amarilla para ammo boost
+                    local pulse = math.sin(love.timer.getTime() * 8) * 0.3 + 0.7
+                    love.graphics.setColor(1, 0.8, 0.2, 0.3 * pulse)
+                    love.graphics.circle("line", datos.x, datos.y, datos.radio + 8, 32)
+                end
+
                 love.graphics.setColor(1, 1, 1)
 
                 tanque.drawHealthBar(id)
@@ -534,6 +573,33 @@ end
 
 function tanque.getTanks()
     return tanks
+end
+
+-- Aplicar powerup de escudo (invulnerabilidad temporal)
+function tanque.applyShield(duration, id)
+    local datos = tanks[id or 1]
+    if not datos or datos.isDead then return false end
+    datos.invulnerable = true
+    datos.invulnTimer = duration
+    return true
+end
+
+-- Aplicar powerup de velocidad
+function tanque.applySpeedBoost(duration, id)
+    local datos = tanks[id or 1]
+    if not datos or datos.isDead then return false end
+    datos.velMax = datos.velMaxBase * 1.5  -- 50% más rápido
+    datos.speedBoostTimer = duration
+    return true
+end
+
+-- Aplicar powerup de munición (disparo más rápido)
+function tanque.applyAmmoBoost(duration, id)
+    local datos = tanks[id or 1]
+    if not datos or datos.isDead then return false end
+    datos.shootDelay = datos.shootDelayBase * 0.5  -- Mitad de cooldown
+    datos.ammoBoostTimer = duration
+    return true
 end
 
 return tanque

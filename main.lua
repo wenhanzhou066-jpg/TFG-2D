@@ -47,6 +47,10 @@ local function goMenu()
 end
 
 function love.load()
+    -- Inicializar generador de números aleatorios para IDs de sala únicos
+    math.randomseed(os.time() * 1000 + (love.timer.getTime() * 1000) % 1000)
+    math.random(); math.random(); math.random()
+
     local sw, sh = love.window.getDesktopDimensions()
     love.window.setMode(sw, sh, {
         fullscreen     = true,

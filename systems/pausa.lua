@@ -2,6 +2,7 @@
 
 local Settings = require("systems.settings")
 local UI = require("systems.ui")
+local Remap = require("systems.controls_remap")
 
 local Pause = {}
 
@@ -11,8 +12,8 @@ local subEstado = "opciones"
 local tiempo = 0
 local botonImg
 
-local opcionesPausa_ES = { "Reanudar", "Reiniciar", "Configuración", "Volver al menú" }
-local opcionesPausa_EN = { "Resume", "Restart", "Settings", "Back to menu" }
+local opcionesPausa_ES = { "Reanudar", "Reiniciar", "Controles", "Configuración", "Volver al menú" }
+local opcionesPausa_EN = { "Resume",   "Restart",   "Controls",  "Settings",      "Back to menu"  }
 local opcionesConfig_ES = { "Volumen música", "Volumen efectos", "Idioma", "Volver" }
 local opcionesConfig_EN = { "Music volume", "SFX volume", "Language", "Back" }
 
@@ -92,9 +93,12 @@ local function ejecutarOpcionPausa()
     elseif opcion == 2 then
         accion = "reiniciar"
     elseif opcion == 3 then
+        -- Controles
+        Remap.open()
+    elseif opcion == 4 then
         subEstado = "configuracion"
         opcion = 1
-    elseif opcion == 4 then
+    elseif opcion == 5 then
         accion = "menu"
     end
 end
@@ -128,6 +132,11 @@ local function ejecutarOpcionConfig(key)
 end
 
 function Pause.keypressed(key)
+    if Remap.isVisible() then
+        Remap.keypressed(key)
+        return
+    end
+
     if subEstado == "opciones" then
         local n = #opcionesPausa_ES
         if key == "up" then
@@ -155,6 +164,8 @@ function Pause.keypressed(key)
 end
 
 function Pause.mousemoved(mx, my)
+    if Remap.isVisible() then return end
+
     local W = love.graphics.getWidth()
     local H = love.graphics.getHeight()
     local panelH = H * 0.72
@@ -173,7 +184,16 @@ function Pause.mousemoved(mx, my)
     end
 end
 
-function Pause.mousepressed(_, _, btn)
+function Pause.mousepressed(mx, my, btn)
+    if Remap.isVisible() then
+        local cx, cy = mx, my
+        if GameView then
+            cx = (mx - GameView.ox) / GameView.scale
+            cy = (my - GameView.oy) / GameView.scale
+        end
+        Remap.mousepressed(cx, cy, btn)
+        return
+    end
     if btn ~= 1 then return end
     if subEstado == "opciones" then
         ejecutarOpcionPausa()

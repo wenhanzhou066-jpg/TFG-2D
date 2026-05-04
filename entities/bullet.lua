@@ -108,12 +108,12 @@ end
 function Bullet.spawn(x, y, angle, tipo, owner, damage)
     if Audio then Audio.disparo() end
     
-    -- Determinar tipo si no se proporciona
+    -- Determinar tipo si no se proporciona (usar el arma del jugador si es 'player' o 'local')
     if not tipo then
-        tipo = (owner == "player") and playerShellKey or "light"
+        tipo = (owner == "player" or owner == "local") and playerShellKey or "light"
     end
-    
-    local ownerId = (owner == "player") and "local" or "bot"
+    -- Unificar identificador de 'local' o 'player' para el sistema de colisiones
+    local ownerId = (owner == "player" or owner == "local") and "local" or "bot"
     local b = createBullet(x, y, angle, tipo, ownerId, owner, damage)
     if owner == "player" and Perfil.activo then
         b.tintR = Perfil.activo.colorAmmoR or 1
@@ -125,20 +125,25 @@ function Bullet.spawn(x, y, angle, tipo, owner, damage)
     active[count] = b
 end
 
--- Chequea colision bala-tanque circular
 local function checkTankHit(bx, by, bradius)
     local Tank = require("entities.tank") -- cargamos aquí para evitar circulares
-    if not Tank or not Tank.getPosition then return false end
-    if Tank.estaMuerto and Tank.estaMuerto() then return false end
-    if Tank.isInvulnerable and Tank.isInvulnerable() then return false end
+    if not Tank or not Tank.getTanks then return false, nil end
+    
+    for id, datos in pairs(Tank.getTanks()) do
+        if not datos.isDead and not datos.invulnerable then
+            local tx, ty, tradius = datos.x, datos.y, datos.radio
+            local dx = bx - tx
+            local dy = by - ty
+            local distSq = dx*dx + dy*dy
+            local sumRadius = (bradius + tradius) * 1.2
 
-    local tx, ty, tradius = Tank.getBounds()
-    local dx = bx - tx
-    local dy = by - ty
-    local distSq = dx*dx + dy*dy
-    local sumRadius = (bradius + tradius) * 1.2
-
-    return distSq < sumRadius*sumRadius
+            if distSq < sumRadius*sumRadius then
+                return true, id
+            end
+        end
+    end
+    
+    return false, nil
 end
 
 -- Chequea colision con otros tanques (multiplayer
@@ -151,8 +156,9 @@ local function checkOtherTanksHit(bx, by, bradius)
     local tankRadius = 30
 
     for pid, tank in pairs(otherTanks) do
-        local tx = tank.target_x or tank.x
-        local ty = tank.target_y or tank.y
+        -- Usar posición visual (interpolada) para colisión, coincidiendo con lo que ve el jugador
+        local tx = tank.x
+        local ty = tank.y
 
         local dx = bx - tx
         local dy = by - ty
@@ -185,20 +191,28 @@ function Bullet.update(dt)
 
         local destroyed = false
 
-        -- Colision con mapa
-        if Map.bulletHit(b.x, b.y, b.radius or 5) then
+        -- 1. Colisión con mapa
+        if not destroyed and Map.bulletHit(b.x, b.y, b.radius or 5) then
             destroyed = true
-        
-        -- Colision con Tanque Local
-        elseif b.spawnTime > 0.05 and b.ownerId ~= "local" and checkTankHit(b.x, b.y, b.radius or 5) then
-            if Tank and Tank.takeDamage then
-                Tank.takeDamage(b.damage)
-            elseif Tank and Tank.checkHit then
-                Tank.checkHit(b.x, b.y, b.damage)
-            end
-            destroyed = true
+        end
 
-        -- Colision con Bots (Tu sistema IA)
+        -- 2. Colisión con Tanques Locales (si la bala no es nuestra)
+        if not destroyed and b.spawnTime > 0.05 and b.ownerId ~= "local" then
+            local hit, hitId = checkTankHit(b.x, b.y, b.radius or 5)
+            if hit then
+                if Tank and Tank.takeDamage then
+                    Tank.takeDamage(b.damage, hitId)
+                elseif Tank and Tank.checkHit then
+                    Tank.checkHit(b.x, b.y, b.damage, hitId)
+                end
+                destroyed = true
+            end
+        end
+
+        -- 3. Colisión con otros tanques (Multiplayer)
+        if not destroyed and b.ownerId == "local" then
+            local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
+        -- Colision con Bots
         elseif b.owner == "player" and Bot then
             if Bot.checkHit(b.x, b.y, b.damage) then
                 destroyed = true
@@ -208,36 +222,37 @@ function Bullet.update(dt)
         elseif b.spawnTime > 0.1 and b.ownerId == "local" then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius)
             if hit then
-                -- Visual feedback + optimistic HP update
+                -- Feedback visual inmediato e intuitivo
                 Effects.spawnExplosion(hitx or b.x, hity or b.y, b.type, b.radius)
                 Effects.spawnDamageNumber(hitx or b.x, (hity or b.y) - 30, b.damage)
                 if Audio then Audio.explosion() end
 
-                -- Predict HP drop locally (server will send authoritative value later)
+                -- Actualización "optimista" de HP
                 if GameMultiplayer and GameMultiplayer.damageOtherTank then
                     GameMultiplayer.damageOtherTank(pid, b.damage)
                 end
-
                 destroyed = true
             end
+        end
 
-        -- Colision con otros tanques (Multiplayer)
-        elseif b.spawnTime > 0.1 and b.ownerId == "local" then
-            local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
-            if hit then
+        -- 4. Colisión con Bots (IA local)
+        if not destroyed and (b.owner == "player" or b.owner == "local") and Bot then
+            if Bot.checkHit(b.x, b.y, b.damage) then
                 destroyed = true
             end
-        
-        -- Vida agotada
-        elseif b.life <= 0 then
+        end
+
+        -- 5. Vida agotada
+        if not destroyed and b.life <= 0 then
             destroyed = true
         end
 
+        -- Procesar destrucción
         if destroyed then
             Effects.spawnExplosion(b.x, b.y, b.type, b.radius)
             if Audio then Audio.explosion() end
             
-            -- Pool Logic 
+            -- Lógica de Pool (mover bala inactiva)
             table.insert(inactive, b)
             active[i] = active[count]
             active[count] = nil

@@ -3,6 +3,7 @@
 -- tiempo de vida y owner ("player" o "bot").
 
 local Effects = require("systems.effects")
+local Perfil  = require("systems.perfil")
 
 local Bullet = {}
 
@@ -97,6 +98,9 @@ local function createBullet(x, y, angle, tipo, ownerId, ownerType, damage)
     b.ownerId = ownerId or "local"
     b.owner = ownerType or "player" -- manteniendo "player" o "bot" para compatibilidad
     b.spawnTime = 0
+    b.tintR = 1
+    b.tintG = 1
+    b.tintB = 1
     return b
 end
 
@@ -111,6 +115,11 @@ function Bullet.spawn(x, y, angle, tipo, owner, damage)
     
     local ownerId = (owner == "player") and "local" or "bot"
     local b = createBullet(x, y, angle, tipo, ownerId, owner, damage)
+    if owner == "player" and Perfil.activo then
+        b.tintR = Perfil.activo.colorAmmoR or 1
+        b.tintG = Perfil.activo.colorAmmoG or 1
+        b.tintB = Perfil.activo.colorAmmoB or 1
+    end
     
     count = count + 1
     active[count] = b
@@ -240,11 +249,12 @@ function Bullet.update(dt)
 end
 
 function Bullet.draw()
-    love.graphics.setColor(1, 1, 1)
     for i = 1, count do
         local b = active[i]
+        love.graphics.setColor(b.tintR or 1, b.tintG or 1, b.tintB or 1)
         love.graphics.draw(b.img, b.x, b.y, b.angle + math.pi/2, DRAW_SCALE, DRAW_SCALE, b.ox, b.oy)
     end
+    love.graphics.setColor(1, 1, 1)
 end
 
 return Bullet

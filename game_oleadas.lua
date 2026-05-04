@@ -3,11 +3,17 @@
 
 local GameOleadas = {}
 
+local leaderboard = require("systems.leaderboard")
+local Minimap     = require("systems.minimap")
+local Perfil      = require("systems.perfil")
+local stats       = { kills = 0, muertes = 0 }
+
+-- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {
     require("systems.maps.map"),
-    require("systems.maps.map_volcano"),
-    require("systems.maps.map_snow"),
-    require("systems.maps.map_city"),
+    -- require("systems.maps.map_volcano"),
+    -- require("systems.maps.map_snow"),
+    -- require("systems.maps.map_city"),
 }
 
 Map = nil
@@ -45,7 +51,7 @@ function GameOleadas.load(mapIdx, modoJuego)
     end
 
     modo = modoJuego or "solo"
-    Map  = allMaps[mapIdx or 1]
+    Map  = allMaps[mapIdx or 1] or allMaps[1]
     Map.load()
     Camera = {x=0, y=0}
 
@@ -61,9 +67,14 @@ function GameOleadas.load(mapIdx, modoJuego)
     end
 
     Audio.load(mapIdx or 1)
+    Minimap.load()
     Pausa.load()
     Oleadas.init(Bot)
     pausado = false
+
+    stats = { kills = 0, muertes = 0 }
+    Bot.onKillCallback = function() stats.kills   = stats.kills   + 1 end
+    Tank.onDieCallback = function() stats.muertes = stats.muertes + 1 end
 end
 
 function GameOleadas.update(dt)
@@ -76,6 +87,16 @@ function GameOleadas.update(dt)
             Oleadas.reset()
             GameOleadas.load(nil, modo)
         elseif accion == "menu" then
+            if Perfil.activo then
+                local victoria = Oleadas.getEstado() == "victoria"
+                leaderboard.enviarPartida(
+                    Perfil.activo.gamertag,
+                    stats.kills,
+                    stats.muertes,
+                    victoria,
+                    "local"
+                )
+            end
             GameOleadas._onEscape()
         end
         return
@@ -95,6 +116,7 @@ function GameOleadas.update(dt)
     local tx, ty  = Tank.getPosition()
     Camera.x = math.max(0, math.min(tx - GAME_W/2, mapSize.w - GAME_W))
     Camera.y = math.max(0, math.min(ty - GAME_H/2, mapSize.h - GAME_H))
+    Minimap.update(tx, ty)
 end
 
 function GameOleadas.draw()
@@ -112,6 +134,7 @@ function GameOleadas.draw()
     Map.drawAbove()
 
     love.graphics.pop()
+    Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     GameOleadas.drawHUD()
     love.graphics.setCanvas()
 
@@ -120,6 +143,7 @@ function GameOleadas.draw()
     love.graphics.rectangle("fill", 0, 0, sw, sh)
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
+    Minimap.drawHUD(Camera.x, Camera.y, GameView)
 
     if pausado then Pausa.draw() end
 end

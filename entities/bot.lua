@@ -5,6 +5,7 @@
 local Colision = require("systems.collision")
 
 local Bot = {}
+Bot.onKillCallback = nil   -- se asigna desde cada modo de juego
 
 local sprites = {}
 local spritesLoaded = false
@@ -465,6 +466,7 @@ function Bot.checkHit(bx, by, danio)
                     Effects.spawnExplosion(b.x, b.y)
                 end
                 if Audio then Audio.explosion() end
+                if Bot.onKillCallback then Bot.onKillCallback() end
             end
             return true
         end
@@ -484,6 +486,7 @@ function Bot.checkHitArea(bx, by, radio, danio)
                     Effects.spawnExplosion(b.x, b.y)
                 end
                 if Audio then Audio.explosion() end
+                if Bot.onKillCallback then Bot.onKillCallback() end
             end
             golpeo = true
         end

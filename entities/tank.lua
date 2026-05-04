@@ -3,6 +3,7 @@
 local Tracks = require("systems.tracks")
 
 local tanque = {}
+tanque.onDieCallback = nil   -- se asigna desde cada modo de juego
 local sprites = {}
 local datos = {}
 local escala = 0.3
@@ -219,17 +220,22 @@ function tanque.draw()
     drawSprite(sprites.tracks, sprites.tracksPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
     local Perfil = require("systems.perfil")
-    local cr, cg, cb = 1, 1, 1
+    local bodyR, bodyG, bodyB = 1, 1, 1
+    local turretR, turretG, turretB = 1, 1, 1
     if Perfil.activo then
-        cr = Perfil.activo.colorR
-        cg = Perfil.activo.colorG
-        cb = Perfil.activo.colorB
+        bodyR   = Perfil.activo.colorBodyR   or 1
+        bodyG   = Perfil.activo.colorBodyG   or 1
+        bodyB   = Perfil.activo.colorBodyB   or 1
+        turretR = Perfil.activo.colorTurretR or 1
+        turretG = Perfil.activo.colorTurretG or 1
+        turretB = Perfil.activo.colorTurretB or 1
     end
-    love.graphics.setColor(cr, cg, cb)
+    love.graphics.setColor(bodyR, bodyG, bodyB)
     drawSprite(sprites.hull, sprites.hullPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
     local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
     local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
+    love.graphics.setColor(turretR, turretG, turretB)
     drawSprite(sprites.weapon, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
     love.graphics.setColor(1, 1, 1)
     -- Barra de vida encima del tanque
@@ -347,6 +353,7 @@ function tanque.die()
     if Audio then
         Audio.explosion()
     end
+    if tanque.onDieCallback then tanque.onDieCallback() end
 end
 
 function tanque.respawn()

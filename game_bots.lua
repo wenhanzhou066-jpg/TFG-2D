@@ -3,11 +3,17 @@
 
 local GameBots = {}
 
+local leaderboard = require("systems.leaderboard")
+local Minimap     = require("systems.minimap")
+local Perfil      = require("systems.perfil")
+local stats       = { kills = 0, muertes = 0 }
+
+-- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {
     require("systems.maps.map"),
-    require("systems.maps.map_volcano"),
-    require("systems.maps.map_snow"),
-    require("systems.maps.map_city"),
+    -- require("systems.maps.map_volcano"),
+    -- require("systems.maps.map_snow"),
+    -- require("systems.maps.map_city"),
 }
 
 Map = nil
@@ -44,7 +50,7 @@ function GameBots.load(mapIdx, dificultad)
     end
 
     nivelDif = dificultad or 2
-    Map = allMaps[mapIdx or 1]
+    Map = allMaps[mapIdx or 1] or allMaps[1]
     Map.load()
     Camera = {x=0, y=0}
 
@@ -60,10 +66,15 @@ function GameBots.load(mapIdx, dificultad)
     end
 
     Audio.load(mapIdx or 1)
+    Minimap.load()
     Pausa.load()
     Bot.setDificultad(nivelDif)
     Bot.load()
     pausado = false
+
+    stats = { kills = 0, muertes = 0 }
+    Bot.onKillCallback = function() stats.kills   = stats.kills   + 1 end
+    Tank.onDieCallback = function() stats.muertes = stats.muertes + 1 end
 end
 
 function GameBots.update(dt)
@@ -75,6 +86,16 @@ function GameBots.update(dt)
         elseif accion == "reiniciar" then
             GameBots.load(nil, nivelDif)
         elseif accion == "menu" then
+            if Perfil.activo then
+                local victoria = Bot.contarVivos() == 0
+                leaderboard.enviarPartida(
+                    Perfil.activo.gamertag,
+                    stats.kills,
+                    stats.muertes,
+                    victoria,
+                    "local"
+                )
+            end
             GameBots._onEscape()
         end
         return
@@ -90,6 +111,7 @@ function GameBots.update(dt)
     local tx, ty  = Tank.getPosition()
     Camera.x = math.max(0, math.min(tx - GAME_W/2, mapSize.w - GAME_W))
     Camera.y = math.max(0, math.min(ty - GAME_H/2, mapSize.h - GAME_H))
+    Minimap.update(tx, ty)
 end
 
 function GameBots.draw()
@@ -107,6 +129,7 @@ function GameBots.draw()
     Map.drawAbove()
 
     love.graphics.pop()
+    Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     GameBots.drawHUD()
     love.graphics.setCanvas()
 
@@ -115,6 +138,7 @@ function GameBots.draw()
     love.graphics.rectangle("fill", 0, 0, sw, sh)
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
+    Minimap.drawHUD(Camera.x, Camera.y, GameView)
 
     if pausado then Pausa.draw() end
 end

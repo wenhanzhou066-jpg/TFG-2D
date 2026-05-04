@@ -8,16 +8,17 @@ local Game = {}
 local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
+local Bot         = require("entities.bot")
 
 -- Contadores de la partida actual
 local stats = { kills = 0, muertes = 0, victoria = false }
 
--- Los 4 mapas disponibles
+-- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {
     require("systems.maps.map"),
-    require("systems.maps.map_volcano"),
-    require("systems.maps.map_snow"),
-    require("systems.maps.map_city"),
+    -- require("systems.maps.map_volcano"),
+    -- require("systems.maps.map_snow"),
+    -- require("systems.maps.map_city"),
 }
 
 -- Globales que tank/bullet/effects leen internamente
@@ -53,7 +54,7 @@ function Game.load(mapIdx)
         gameCanvas = love.graphics.newCanvas(GAME_W, GAME_H)
     end
 
-    Map = allMaps[mapIdx or 1]
+    Map = allMaps[mapIdx or 1] or allMaps[1]
     Map.load()
     Minimap.load()
     Camera = {x=0, y=0}   -- reiniciar cámara al cargar mapa
@@ -80,6 +81,9 @@ function Game.load(mapIdx)
     end
 
     Audio.load(mapIdx or 1)
+
+    Bot.onKillCallback  = function() Game.addKill() end
+    Tank.onDieCallback  = function() Game.addMuerte() end
 end
 
 function Game.addKill()   stats.kills   = stats.kills   + 1 end

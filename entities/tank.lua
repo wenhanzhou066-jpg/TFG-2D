@@ -268,23 +268,28 @@ function tanque.draw()
                 drawSprite(sprites.tracks, sprites.tracksPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
                 local cr, cg, cb = 1, 1, 1
+                local tr, tg, tb = 1, 1, 1
                 if id == 1 then
                     local Perfil = require("systems.perfil")
                     if Perfil.activo then
-                        cr = Perfil.activo.colorR
-                        cg = Perfil.activo.colorG
-                        cb = Perfil.activo.colorB
+                        cr = Perfil.activo.colorBodyR   or 1
+                        cg = Perfil.activo.colorBodyG   or 1
+                        cb = Perfil.activo.colorBodyB   or 1
+                        tr = Perfil.activo.colorTurretR or 1
+                        tg = Perfil.activo.colorTurretG or 1
+                        tb = Perfil.activo.colorTurretB or 1
                     end
                 end
 
-                love.graphics.setColor(cr, cg, cb)
                 local hullSprite = id == 2 and sprites.hull2 or sprites.hull
                 local weaponSprite = id == 2 and sprites.weapon2 or sprites.weapon
 
+                love.graphics.setColor(cr, cg, cb)
                 drawSprite(hullSprite, sprites.hullPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
                 local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
                 local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
+                love.graphics.setColor(tr, tg, tb)
                 drawSprite(weaponSprite, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
                 love.graphics.setColor(1, 1, 1)
 

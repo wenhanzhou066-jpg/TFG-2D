@@ -157,6 +157,19 @@ function GameServer:handle_connect(data, ip, port, addr_key)
     end
 
     local room = self.rooms[room_id]
+
+    -- VERIFICAR: ¿Sala llena?
+    local current_count = 0
+    for _ in pairs(room.clients) do current_count = current_count + 1 end
+    local max_players = room.metadata.max_players or 8
+
+    if current_count >= max_players and not room.clients[addr_key] then
+        print(string.format("[RECHAZAR] Sala '%s' llena (%d/%d) - rechazando %s:%d",
+            room_id, current_count, max_players, ip, port))
+        -- Enviar rechazo (el cliente manejará esto)
+        return
+    end
+
     local player_id = room:add_client(addr_key)
     self.addr_to_room[addr_key] = room_id
 
@@ -164,8 +177,8 @@ function GameServer:handle_connect(data, ip, port, addr_key)
     local count = 0
     for _ in pairs(room.clients) do count = count + 1 end
 
-    print(string.format("[CONNECT] Player %d joined room '%s' from %s:%d (total in room: %d)",
-        player_id, room_id, ip, port, count))
+    print(string.format("[CONNECT] Player %d joined room '%s' from %s:%d (total in room: %d/%d)",
+        player_id, room_id, ip, port, count, max_players))
 
     -- Enviar welcome
     local response = binary_protocol.encode({

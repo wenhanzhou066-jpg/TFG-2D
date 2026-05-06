@@ -23,8 +23,11 @@ local fonts = {
 
 function RoomConfig.load(escena)
     selectedMode = 1
-    roomInput = "sala_" .. math.random(1000, 9999)
-    creatingRoom = false  -- Reset flag
+    -- Generar ID de sala único: timestamp + aleatorio
+    local timestamp = math.floor(os.time() % 10000)
+    local random = math.random(100, 999)
+    roomInput = "sala_" .. timestamp .. "_" .. random
+    creatingRoom = false  -- Reiniciar bandera
 
     local H = love.graphics.getHeight()
     fonts.big = love.graphics.newFont(math.floor(H * 0.06))

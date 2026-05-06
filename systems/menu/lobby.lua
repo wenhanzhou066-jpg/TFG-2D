@@ -147,8 +147,9 @@ function Lobby.update(dt, escena)
             playerCount = playerCount + 1
         end
 
-        -- Si hay 2 jugadores, empezar cuenta atras
-        if playerCount >= 2 and estado == "waiting" then
+        -- Auto-iniciar solo si la sala está llena (respeta max_players)
+        local maxPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 8
+        if playerCount >= maxPlayers and estado == "waiting" then
             estado = "ready"
             countdown = 3
         end
@@ -397,7 +398,8 @@ function Lobby.draw(escena)
     local buttonSpacing = 30
 
     -- Anfitrión: Mostrar botón Iniciar Juego
-    if isHost and estado == "waiting" and playerCount >= 2 then
+    local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2  -- FFA min 2
+    if isHost and estado == "waiting" and playerCount >= minPlayers then
         local startButtonX = W/2 - buttonW - buttonSpacing/2
         local startButtonY = H * 0.83
 
@@ -413,7 +415,11 @@ function Lobby.draw(escena)
         love.graphics.setLineWidth(2)
         love.graphics.rectangle("line", startButtonX, startButtonY, buttonW, buttonH, 10, 10)
         local textHeight = fonts.medium:getHeight()
-        love.graphics.printf("INICIAR JUEGO", startButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        local startText = "START GAME"
+        if gameMode == "ffa" then
+            startText = startText .. string.format(" (%d+)", minPlayers)  -- "START GAME (2+)"
+        end
+        love.graphics.printf(startText, startButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
 
         -- Botón Salir (lado derecho)
         local leaveButtonX = W/2 + buttonSpacing/2
@@ -426,7 +432,7 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("SALIR", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf("LEAVE", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
     else
         -- No anfitrión o no hay suficientes jugadores: Solo mostrar botón salir centrado
         local leaveButtonX = W/2 - buttonW/2
@@ -442,13 +448,13 @@ function Lobby.draw(escena)
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, leaveButtonY, buttonW, buttonH, 10, 10)
         local textHeight = fonts.medium:getHeight()
-        love.graphics.printf("SALIR DE LA SALA", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf("LEAVE ROOM", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
     end
 
     -- Indicación ESC
     love.graphics.setFont(fonts.small)
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[ESC] Volver al menú", 0, H * 0.93, W, "center")
+    love.graphics.printf("[ESC] Back to menu", 0, H * 0.93, W, "center")
 end
 
 function Lobby.keypressed(key, escena)
@@ -510,7 +516,8 @@ function Lobby.mousemoved(x, y, escena)
     local buttonY = H * 0.83
     local buttonSpacing = 30
 
-    if isHost and estado == "waiting" and playerCount >= 2 then
+    local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2
+    if isHost and estado == "waiting" and playerCount >= minPlayers then
         -- Botón Iniciar (izquierda)
         local startButtonX = W/2 - buttonW - buttonSpacing/2
         startButtonHover = x >= startButtonX and x <= startButtonX + buttonW and
@@ -560,7 +567,8 @@ function Lobby.mousepressed(x, y, btn, escena)
     end
 
     -- Verificar botón iniciar juego (solo anfitrión)
-    if isHost and startButtonHover and estado == "waiting" and playerCount >= 2 then
+    local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2  -- FFA min 2
+    if isHost and startButtonHover and estado == "waiting" and playerCount >= minPlayers then
         -- Forzar inicio del juego
         estado = "ready"
         countdown = 0

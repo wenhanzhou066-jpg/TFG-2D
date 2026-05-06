@@ -151,14 +151,18 @@ function RoomBrowser.draw(escena)
             local selected = roomIndex == selectedRoom
 
             -- Fondo de fila
-            if selected then
+            local isFull = room.status == "full"
+            if selected and not isFull then
                 love.graphics.setColor(0.2, 0.5, 0.7, 0.5)
+                love.graphics.rectangle("fill", W * 0.11, y - 3, W * 0.78, rowHeight - 6, 5, 5)
+            elseif isFull then
+                love.graphics.setColor(0.3, 0.1, 0.1, 0.4)
                 love.graphics.rectangle("fill", W * 0.11, y - 3, W * 0.78, rowHeight - 6, 5, 5)
             end
 
             -- Nombre sala
             love.graphics.setFont(fonts.medium)
-            love.graphics.setColor(1, 1, 1)
+            love.graphics.setColor(isFull and 0.5 or 1, isFull and 0.5 or 1, isFull and 0.5 or 1)
             local nameY = y + (rowHeight - fonts.medium:getHeight()) / 2 - 5
             love.graphics.print(room.room_id, W * 0.13, nameY)
 
@@ -227,6 +231,10 @@ function RoomBrowser.keypressed(key, escena)
         local rooms = RoomBrowser.getFilteredRooms()
         if #rooms > 0 and rooms[selectedRoom] then
             local room = rooms[selectedRoom]
+            -- No unirse si está llena
+            if room.status == "full" then
+                return
+            end
             -- Unirse a la sala seleccionada
             escena.navegarA("lobby_join", { room_name = room.room_id, game_mode = room.game_mode })
         end
@@ -295,7 +303,10 @@ function RoomBrowser.mousepressed(x, y, btn, escena)
             local rowY = startY + (i - 1) * rowHeight
             if x >= W * 0.11 and x <= W * 0.89 and y >= rowY - 3 and y <= rowY + rowHeight - 6 then
                 local room = rooms[roomIndex]
-                escena.navegarA("lobby_join", { room_name = room.room_id, game_mode = room.game_mode })
+                -- No unirse si está llena
+                if room.status ~= "full" then
+                    escena.navegarA("lobby_join", { room_name = room.room_id, game_mode = room.game_mode })
+                end
                 break
             end
         end

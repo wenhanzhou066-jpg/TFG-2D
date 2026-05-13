@@ -21,19 +21,24 @@ function utils.format_path(path)
 end
 
 -- Compensation for scale/rotation shift
+-- tileW/tileH are the MAP grid dimensions (kept for API compat but unused).
+-- We use the tile's own width/height so that large tiles (128px, 256px) placed
+-- on a 64px grid are rendered at the same position Tiled shows them.
 function utils.compensate(tile, tileX, tileY, tileW, tileH)
+	local tw    = tile.width
+	local th    = tile.height
 	local compx = 0
 	local compy = 0
 
-	if tile.sx < 0 then compx = tileW end
-	if tile.sy < 0 then compy = tileH end
+	if tile.sx < 0 then compx = tw end
+	if tile.sy < 0 then compy = th end
 
 	if tile.r > 0 then
-		tileX = tileX + tileH - compy
-		tileY = tileY + tileH + compx - tileW
+		tileX = tileX + tw - compy
+		tileY = tileY + compx
 	elseif tile.r < 0 then
 		tileX = tileX + compy
-		tileY = tileY - compx + tileH
+		tileY = tileY + th - compx
 	else
 		tileX = tileX + compx
 		tileY = tileY + compy

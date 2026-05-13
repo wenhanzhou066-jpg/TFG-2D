@@ -13,6 +13,36 @@ local VIDA_MAX = 5
 local timerInvulnerable = 0
 local TIEMPO_INVULNERABLE = 0.8
 
+local function circleVsPoly(cx, cy, r, poly)
+    local n = #poly
+    local inside = false
+    local j = n
+    for i = 1, n do
+        local xi, yi = poly[i].x, poly[i].y
+        local xj, yj = poly[j].x, poly[j].y
+        if ((yi > cy) ~= (yj > cy)) and
+           (cx < (xj - xi) * (cy - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    if inside then return true end
+    j = n
+    for i = 1, n do
+        local ax, ay = poly[j].x, poly[j].y
+        local bx, by = poly[i].x, poly[i].y
+        local dx, dy = bx - ax, by - ay
+        local lenSq  = dx*dx + dy*dy
+        local t = lenSq > 0
+            and math.max(0, math.min(1, ((cx-ax)*dx + (cy-ay)*dy) / lenSq))
+            or 0
+        local ex, ey = ax + t*dx - cx, ay + t*dy - cy
+        if ex*ex + ey*ey < r*r then return true end
+        j = i
+    end
+    return false
+end
+
 -- colision del tanque con el mapa
 local function isBlocked(nx, ny, r, selfId)
     -- Colisión con otros tanques locales
@@ -37,10 +67,10 @@ local function isBlocked(nx, ny, r, selfId)
     end
     for _, w in ipairs(Map.getWalls()) do
         if not (w.dest and w.hp <= 0) then
-            local cx = math.max(w.x, math.min(nx, w.x + w.w))
-            local cy = math.max(w.y, math.min(ny, w.y + w.h))
-            if (nx - cx)^2 + (ny - cy)^2 < r*r then
-                return true
+            if nx+r >= w.x and nx-r <= w.x+w.w and
+               ny+r >= w.y and ny-r <= w.y+w.h then
+                local hit = not w.polygon or circleVsPoly(nx, ny, r, w.polygon)
+                if hit then return true end
             end
         end
     end
@@ -49,15 +79,18 @@ local function isBlocked(nx, ny, r, selfId)
         for _, rv in ipairs(Map.getRivers()) do
             if p[1] >= rv.x and p[1] <= rv.x+rv.w and
                p[2] >= rv.y and p[2] <= rv.y+rv.h then
-                local onBridge = false
-                for _, br in ipairs(Map.getBridges()) do
-                    if p[1] >= br.x and p[1] <= br.x+br.w and
-                       p[2] >= br.y and p[2] <= br.y+br.h then
-                        onBridge = true
-                        break
+                local inRiver = not rv.polygon or circleVsPoly(p[1], p[2], 1, rv.polygon)
+                if inRiver then
+                    local onBridge = false
+                    for _, br in ipairs(Map.getBridges()) do
+                        if p[1] >= br.x and p[1] <= br.x+br.w and
+                           p[2] >= br.y and p[2] <= br.y+br.h then
+                            onBridge = true
+                            break
+                        end
                     end
+                    if not onBridge then return true end
                 end
-                if not onBridge then return true end
             end
         end
     end

@@ -9,30 +9,31 @@ local GameBots        = require("game_bots")
 
 local escena = "menu"
 
-local mapActual = 1
 local modoOleadas = "solo"
 
-local function startGame(mapIdx)
+local function randomMap() return math.random(1, 3) end
+
+local function startGame()
     Menu.stopMusic()
-    Game.load(mapIdx)
+    Game.load(randomMap())
     escena = "juego"
 end
 
-local function startMultiplayer(mapIdx)
+local function startMultiplayer()
     Menu.stopMusic()
-    GameMultiplayer.load(mapIdx or 1)
+    GameMultiplayer.load(randomMap())
     escena = "multiplayer"
 end
 
-local function startOleadas(modo, mapIdx)
+local function startOleadas(modo)
     Menu.stopMusic()
-    GameOleadas.load(mapIdx or mapActual, modo)
+    GameOleadas.load(randomMap(), modo)
     escena = "oleadas"
 end
 
-local function startBots(dificultad, mapIdx)
+local function startBots(dificultad)
     Menu.stopMusic()
-    GameBots.load(mapIdx or mapActual, dificultad)
+    GameBots.load(randomMap(), dificultad)
     escena = "bots"
 end
 
@@ -67,16 +68,16 @@ function love.update(dt)
         local action = Menu.getAction()
         if action then
             Menu.clearAction()
-            if     action == "play_map_1"        then startGame(1)
-            elseif action == "play_map_2"        then startGame(2)
-            elseif action == "play_map_3"        then startGame(3)
-            elseif action == "play_map_4"        then startGame(4)
-            elseif action == "play_multiplayer"  then startMultiplayer(1)
-            elseif action == "oleadas_solo"      then startOleadas("solo", mapActual)
-            elseif action == "oleadas_coop"      then startOleadas("coop", mapActual)
-            elseif action == "bots_facil"        then startBots(1, mapActual)
-            elseif action == "bots_normal"       then startBots(2, mapActual)
-            elseif action == "bots_dificil"      then startBots(3, mapActual)
+            if     action == "play_map_1"        then startGame()
+            elseif action == "play_map_2"        then startGame()
+            elseif action == "play_map_3"        then startGame()
+            elseif action == "play_map_4"        then startGame()
+            elseif action == "play_multiplayer"  then startMultiplayer()
+            elseif action == "oleadas_solo"      then startOleadas("solo")
+            elseif action == "oleadas_coop"      then startOleadas("coop")
+            elseif action == "bots_facil"        then startBots(1)
+            elseif action == "bots_normal"       then startBots(2)
+            elseif action == "bots_dificil"      then startBots(3)
             end
         end
 

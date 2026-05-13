@@ -8,48 +8,193 @@ local Map = {}
 local W, H = 3840, 2176
 
 local stiMap        = nil
-local walls         = {}   -- {x,y,w,h, dest,hp, terrain}
+local walls         = {}   -- {x,y,w,h, polygon?, dest,hp,terrain}
 local rivers        = {}   -- {x,y,w,h}
 local bridges       = {}   -- {x,y,w,h}
 local spawns        = {}   -- {x,y}
 local powerupSpawns = {}   -- {type,x,y}
-local ruinsImg      = nil  -- imagen de edificio destruido
 
 function Map.getSize() return {w=W, h=H} end
 
 local GROUND_LAYERS = {"terreno", "caminos", "rio", "decoracion"}
 local ABOVE_LAYERS  = {"arboles"}
 
+-- Capas que contienen tiles visuales de edificios destruibles.
+-- Los edificios van en "decoracion"; "arboles" son árboles, no se tocan.
+local BUILDING_TILE_LAYERS = {decoracion = true}
+
+local function objBounds(obj)
+    if obj.polygon then
+        local minx, miny, maxx, maxy = math.huge, math.huge, -math.huge, -math.huge
+        for _, pt in ipairs(obj.polygon) do
+            if pt.x < minx then minx = pt.x end
+            if pt.y < miny then miny = pt.y end
+            if pt.x > maxx then maxx = pt.x end
+            if pt.y > maxy then maxy = pt.y end
+        end
+        -- STI already converted polygon vertices to world-space in setObjectCoordinates;
+        -- do NOT add obj.x/obj.y again or the bounding box will be double-offset.
+        return minx, miny, maxx - minx, maxy - miny
+    end
+    return obj.x, obj.y, obj.width, obj.height
+end
+
+-- Colisión círculo vs polígono (world-space vertices)
+local function circleVsPoly(cx, cy, r, poly)
+    local n = #poly
+    -- punto dentro del polígono (ray casting)
+    local inside = false
+    local j = n
+    for i = 1, n do
+        local xi, yi = poly[i].x, poly[i].y
+        local xj, yj = poly[j].x, poly[j].y
+        if ((yi > cy) ~= (yj > cy)) and
+           (cx < (xj - xi) * (cy - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    if inside then return true end
+    -- distancia a cada arista
+    j = n
+    for i = 1, n do
+        local ax, ay = poly[j].x, poly[j].y
+        local bx, by = poly[i].x, poly[i].y
+        local dx, dy = bx - ax, by - ay
+        local lenSq  = dx*dx + dy*dy
+        local t = lenSq > 0
+            and math.max(0, math.min(1, ((cx-ax)*dx + (cy-ay)*dy) / lenSq))
+            or 0
+        local ex, ey = ax + t*dx - cx, ay + t*dy - cy
+        if ex*ex + ey*ey < r*r then return true end
+        j = i
+    end
+    return false
+end
+
+-- ── Corrección de rutas de tilesets ──────────────────────────
+-- Cada exportación de Tiled puede usar rutas absolutas o relativas distintas.
+-- Mapeamos por nombre de fichero (independiente de la ruta) a la ruta correcta
+-- relativa al fichero de mapa (systems/maps/ → ../../assets/maps/bosque/).
+local KNOWN_TILESETS = {
+    ["bosque_64.tsx"]  = "../../assets/maps/bosque/bosque_64.tsx",
+    ["bosque_128.tsx"] = "../../assets/maps/bosque/bosque_128.tsx",
+    ["bosque_256.tsx"] = "../../assets/maps/bosque/bosque_256.tsx",
+    ["64x64.tsx"]      = "../../assets/maps/bosque/64x64.tsx",
+    ["128x128.tsx"]    = "../../assets/maps/bosque/128x128.tsx",
+    ["256x256.tsx"]    = "../../assets/maps/bosque/256x256.tsx",
+}
+
+local function fixMapTilesets(data)
+    if type(data) ~= "table" or not data.tilesets then return data end
+    local kept = {}
+    for _, ts in ipairs(data.tilesets) do
+        if ts.filename then
+            -- Extrae sólo el nombre de fichero de cualquier ruta
+            local fname = ts.filename:match("([^/\\]+%.tsx)$")
+            local fixed = fname and KNOWN_TILESETS[fname]
+            if fixed then
+                ts.filename = fixed
+                kept[#kept+1] = ts
+            end
+            -- Tilesets no reconocidos (no usados) se descartan silenciosamente
+        else
+            kept[#kept+1] = ts  -- tileset inline, conservar
+        end
+    end
+    data.tilesets = kept
+    return data
+end
+
+-- Oculta en el SpriteBatch de STI todos los tiles de BUILDING_TILE_LAYERS
+-- que solapan el área del edificio (polígono + ABOVE_EXTEND encima).
+-- Esto evita residuos visuales sin necesidad de terrainCanvas.
+local function clearBuildingTiles(w)
+    if not stiMap then return end
+    local baseH = stiMap.tileheight  -- grid cell height (64px)
+    for _, instances in pairs(stiMap.tileInstances) do
+        for _, inst in ipairs(instances) do
+            if inst.layer and BUILDING_TILE_LAYERS[inst.layer.name]
+               and inst.batch and inst.id then
+                local td = stiMap.tiles[inst.gid]
+                local tw = (td and td.width)  or stiMap.tilewidth
+                local th = (td and td.height) or stiMap.tileheight
+                local clear
+                if th > baseH then
+                    -- Tall building sprite: tile top extends (th-baseH) above its base row.
+                    -- Search from that theoretical maximum upward extent down to polygon bottom.
+                    local y1 = w.y - (th - baseH)
+                    clear = inst.x < w.x + w.w and inst.x + tw > w.x and
+                            inst.y < w.y + w.h  and inst.y + th > y1
+                else
+                    -- Small tile (rock, bush, 64px decoration): only clear if inside polygon.
+                    clear = inst.x < w.x + w.w and inst.x + tw > w.x and
+                            inst.y < w.y + w.h  and inst.y + th > w.y
+                end
+                if clear then
+                    inst.batch:set(inst.id, inst.x, inst.y, inst.r, 0, 0)
+                end
+            end
+        end
+    end
+end
+
 -- ── Carga ─────────────────────────────────────────────────────
+local MAP_FILE = "systems/maps/mapa_black_steel_bosque.lua"
+
 function Map.load()
     walls, rivers, bridges, spawns, powerupSpawns = {},{},{},{},{}
 
-    if love.filesystem.getInfo("assets/images/edificio_destruido.png") then
-        ruinsImg = love.graphics.newImage("assets/images/edificio_destruido.png")
+    -- Parchea love.filesystem.load temporalmente para corregir rutas de tilesets
+    -- sin necesidad de editar el fichero exportado por Tiled manualmente.
+    local origLoad = love.filesystem.load
+    love.filesystem.load = function(path)
+        local fn = origLoad(path)
+        if path == MAP_FILE then
+            return function()
+                return fixMapTilesets(fn())
+            end
+        end
+        return fn
     end
-
-    stiMap = sti("systems/maps/map/mapa_black_steel.lua")
+    stiMap = sti(MAP_FILE)
+    love.filesystem.load = origLoad
 
     -- Capa de colisiones
     local col = stiMap.layers["colisiones"]
     if col and col.objects then
         for _, obj in ipairs(col.objects) do
             local t = obj.type or obj.class or ""
-            if t == "wall" then
+            local bx, by, bw, bh = objBounds(obj)
+
+            -- construir polígono en coordenadas mundo si el objeto es polígono.
+            -- STI's setObjectCoordinates already added obj.x/obj.y to every vertex,
+            -- so we copy the vertices as-is (no double-offset).
+            local poly = nil
+            if obj.polygon then
+                poly = {}
+                for _, pt in ipairs(obj.polygon) do
+                    poly[#poly+1] = {x = pt.x, y = pt.y}
+                end
+            end
+
+            if t == "wall" or t == "" then
                 walls[#walls+1] = {
-                    x=obj.x, y=obj.y, w=obj.width, h=obj.height,
+                    x=bx, y=by, w=bw, h=bh,
+                    polygon=poly,
                     dest=false, hp=0, terrain=false
                 }
             elseif t == "destructible" then
                 local hp = (obj.properties and obj.properties.hp) or 3
                 walls[#walls+1] = {
-                    x=obj.x, y=obj.y, w=obj.width, h=obj.height,
+                    x=bx, y=by, w=bw, h=bh,
+                    polygon=poly,
                     dest=true, hp=hp, terrain=false
                 }
             elseif t == "river" then
-                rivers[#rivers+1] = {x=obj.x, y=obj.y, w=obj.width, h=obj.height}
+                rivers[#rivers+1] = {x=bx, y=by, w=bw, h=bh, polygon=poly}
             elseif t == "bridge" then
-                bridges[#bridges+1] = {x=obj.x, y=obj.y, w=obj.width, h=obj.height}
+                bridges[#bridges+1] = {x=bx, y=by, w=bw, h=bh, polygon=poly}
             end
         end
     end
@@ -85,6 +230,17 @@ function Map.load()
 end
 
 -- ── Dibujo ────────────────────────────────────────────────────
+
+-- Escombros sobre el polígono de colisión para edificios destruidos.
+local function drawDestroyedOverlay(w)
+    love.graphics.setColor(0.25, 0.2, 0.15, 0.7)
+    love.graphics.rectangle("fill", w.x + w.w*0.1, w.y + w.h*0.15, w.w*0.35, w.h*0.3)
+    love.graphics.rectangle("fill", w.x + w.w*0.5, w.y + w.h*0.5,  w.w*0.4,  w.h*0.35)
+    love.graphics.setColor(0.18, 0.14, 0.1, 0.5)
+    love.graphics.rectangle("fill", w.x + w.w*0.3, w.y + w.h*0.35, w.w*0.25, w.h*0.25)
+    love.graphics.setColor(1, 1, 1)
+end
+
 function Map.drawGround()
     love.graphics.setColor(1, 1, 1)
     for _, name in ipairs(GROUND_LAYERS) do
@@ -92,15 +248,13 @@ function Map.drawGround()
         if layer then stiMap:drawLayer(layer) end
     end
 
-    -- Overlay de daño en edificios destruibles
+    -- Overlay de daño / destrucción sobre el polígono de colisión (zona suelo).
+    -- Solo tintamos el bounding box del polígono (sin extensión hacia arriba)
+    -- para evitar que la zona oscura sea demasiado grande.
     for _, w in ipairs(walls) do
         if w.dest then
             if w.hp <= 0 then
-                if ruinsImg then
-                    local iw, ih = ruinsImg:getDimensions()
-                    love.graphics.setColor(1, 1, 1)
-                    love.graphics.draw(ruinsImg, w.x, w.y, 0, w.w / iw, w.h / ih)
-                end
+                drawDestroyedOverlay(w)
             elseif w.hp == 1 then
                 love.graphics.setColor(0, 0, 0, 0.55)
                 love.graphics.rectangle("fill", w.x, w.y, w.w, w.h)
@@ -128,16 +282,74 @@ function Map.getBridges()       return bridges       end
 function Map.getSpawns()        return spawns        end
 function Map.getPowerupSpawns() return powerupSpawns end
 
+local debugCollision = false
+function Map.toggleDebug() debugCollision = not debugCollision end
+
+function Map.drawDebug()
+    if not debugCollision then return end
+    love.graphics.setLineWidth(2)
+    for _, w in ipairs(walls) do
+        if w.dest then
+            if w.hp <= 0 then
+                love.graphics.setColor(0.4, 0.4, 0.4, 0.8)
+            else
+                love.graphics.setColor(1, 0.4, 0, 0.8)
+            end
+        else
+            love.graphics.setColor(1, 0, 0, 0.8)
+        end
+        if w.polygon then
+            local verts = {}
+            for _, pt in ipairs(w.polygon) do
+                verts[#verts+1] = pt.x
+                verts[#verts+1] = pt.y
+            end
+            love.graphics.polygon("line", verts)
+        else
+            love.graphics.rectangle("line", w.x, w.y, w.w, w.h)
+        end
+    end
+    for _, rv in ipairs(rivers) do
+        love.graphics.setColor(0, 0.5, 1, 0.6)
+        if rv.polygon then
+            local verts = {}
+            for _, pt in ipairs(rv.polygon) do verts[#verts+1]=pt.x; verts[#verts+1]=pt.y end
+            love.graphics.polygon("line", verts)
+        else
+            love.graphics.rectangle("line", rv.x, rv.y, rv.w, rv.h)
+        end
+    end
+    for _, br in ipairs(bridges) do
+        love.graphics.setColor(0, 1, 0.5, 0.6)
+        if br.polygon then
+            local verts = {}
+            for _, pt in ipairs(br.polygon) do verts[#verts+1]=pt.x; verts[#verts+1]=pt.y end
+            love.graphics.polygon("line", verts)
+        else
+            love.graphics.rectangle("line", br.x, br.y, br.w, br.h)
+        end
+    end
+    love.graphics.setLineWidth(1)
+    love.graphics.setColor(1, 1, 1)
+end
+
 function Map.bulletHit(x, y, r)
     r = r or 1
     for _, w in ipairs(walls) do
         if w.terrain then goto next_bh end
         if x+r >= w.x and x-r <= w.x+w.w and
            y+r >= w.y and y-r <= w.y+w.h then
-            if w.dest then
-                if w.hp > 0 then w.hp = w.hp - 1; return true end
-            else
-                return true
+            local hit = not w.polygon or circleVsPoly(x, y, r, w.polygon)
+            if hit then
+                if w.dest then
+                    if w.hp > 0 then
+                        w.hp = w.hp - 1
+                        if w.hp <= 0 then clearBuildingTiles(w) end
+                        return true
+                    end
+                else
+                    return true
+                end
             end
         end
         ::next_bh::
@@ -149,9 +361,10 @@ function Map.isBlocked(x, y)
     for _, w in ipairs(walls) do
         if w.terrain then goto next_ib end
         if not (w.dest and w.hp <= 0) then
-            if x >= w.x and x <= w.x+w.w and
-               y >= w.y and y <= w.y+w.h then
-                return true
+            if x+1 >= w.x and x-1 <= w.x+w.w and
+               y+1 >= w.y and y-1 <= w.y+w.h then
+                local hit = not w.polygon or circleVsPoly(x, y, 1, w.polygon)
+                if hit then return true end
             end
         end
         ::next_ib::
@@ -159,13 +372,17 @@ function Map.isBlocked(x, y)
     for _, rv in ipairs(rivers) do
         if x >= rv.x and x <= rv.x+rv.w and
            y >= rv.y and y <= rv.y+rv.h then
-            for _, b in ipairs(bridges) do
-                if x >= b.x and x <= b.x+b.w and
-                   y >= b.y and y <= b.y+b.h then
-                    return false
+            local inRiver = not rv.polygon or circleVsPoly(x, y, 1, rv.polygon)
+            if inRiver then
+                for _, b in ipairs(bridges) do
+                    if x >= b.x and x <= b.x+b.w and
+                       y >= b.y and y <= b.y+b.h then
+                        local onBridge = not b.polygon or circleVsPoly(x, y, 1, b.polygon)
+                        if onBridge then return false end
+                    end
                 end
+                return true
             end
-            return true
         end
     end
     return false

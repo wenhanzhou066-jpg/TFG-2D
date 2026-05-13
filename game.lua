@@ -16,9 +16,8 @@ local stats = { kills = 0, muertes = 0, victoria = false }
 -- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {
     require("systems.maps.map"),
-    -- require("systems.maps.map_volcano"),
-    -- require("systems.maps.map_snow"),
-    -- require("systems.maps.map_city"),
+    require("systems.maps.map_volcan"),
+    require("systems.maps.map_nieve"),
 }
 
 -- Globales que tank/bullet/effects leen internamente

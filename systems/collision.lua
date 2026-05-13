@@ -3,6 +3,36 @@
 
 local Collision = {}
 
+local function circleVsPoly(cx, cy, r, poly)
+    local n = #poly
+    local inside = false
+    local j = n
+    for i = 1, n do
+        local xi, yi = poly[i].x, poly[i].y
+        local xj, yj = poly[j].x, poly[j].y
+        if ((yi > cy) ~= (yj > cy)) and
+           (cx < (xj - xi) * (cy - yi) / (yj - yi) + xi) then
+            inside = not inside
+        end
+        j = i
+    end
+    if inside then return true end
+    j = n
+    for i = 1, n do
+        local ax, ay = poly[j].x, poly[j].y
+        local bx, by = poly[i].x, poly[i].y
+        local dx, dy = bx - ax, by - ay
+        local lenSq  = dx*dx + dy*dy
+        local t = lenSq > 0
+            and math.max(0, math.min(1, ((cx-ax)*dx + (cy-ay)*dy) / lenSq))
+            or 0
+        local ex, ey = ax + t*dx - cx, ay + t*dy - cy
+        if ex*ex + ey*ey < r*r then return true end
+        j = i
+    end
+    return false
+end
+
 function Collision.isBlocked(nx, ny, r)
     if not Map then return false end
     local mw, mh = 1920, 1080
@@ -19,10 +49,10 @@ function Collision.isBlocked(nx, ny, r)
     for j = 1, #walls do
         local w = walls[j]
         if not (w.dest and w.hp <= 0) then
-            local cx = math.max(w.x, math.min(nx, w.x + w.w))
-            local cy = math.max(w.y, math.min(ny, w.y + w.h))
-            if (nx - cx)^2 + (ny - cy)^2 < r * r then
-                return true
+            if nx+r >= w.x and nx-r <= w.x+w.w and
+               ny+r >= w.y and ny-r <= w.y+w.h then
+                local hit = not w.polygon or circleVsPoly(nx, ny, r, w.polygon)
+                if hit then return true end
             end
         end
     end
@@ -38,15 +68,19 @@ function Collision.isBlocked(nx, ny, r)
             local rv = rivers[j]
             if px >= rv.x and px <= rv.x+rv.w and
                py >= rv.y and py <= rv.y+rv.h then
-                local enPuente = false
-                for m = 1, #bridges do
-                    local br = bridges[m]
-                    if px >= br.x and px <= br.x+br.w and
-                       py >= br.y and py <= br.y+br.h then
-                        enPuente = true; break
+                local inRiver = not rv.polygon or circleVsPoly(px, py, 1, rv.polygon)
+                if inRiver then
+                    local enPuente = false
+                    for m = 1, #bridges do
+                        local br = bridges[m]
+                        if px >= br.x and px <= br.x+br.w and
+                           py >= br.y and py <= br.y+br.h then
+                            local onBridge = not br.polygon or circleVsPoly(px, py, 1, br.polygon)
+                            if onBridge then enPuente = true; break end
+                        end
                     end
+                    if not enPuente then return true end
                 end
-                if not enPuente then return true end
             end
         end
     end
@@ -69,9 +103,10 @@ function Collision.lineOfSight(x1, y1, x2, y2)
         for i = 1, #walls do
             local w = walls[i]
             if not(w.dest and w.hp <= 0) then
-                if px >= w.x and px <= w.x + w.w and
-                   py >= w.y and py <= w.y + w.h then
-                    return false -- bloqueado
+                if px >= w.x and px <= w.x+w.w and
+                   py >= w.y and py <= w.y+w.h then
+                    local hit = not w.polygon or circleVsPoly(px, py, 1, w.polygon)
+                    if hit then return false end
                 end
             end
         end

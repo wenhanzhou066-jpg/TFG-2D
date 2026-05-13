@@ -32,9 +32,10 @@ local function parseTSX(data)
 	tileset.tilecount = tonumber(data:match('tilecount="(%d+)"'))
 	tileset.columns = tonumber(data:match('columns="(%d+)"'))
 
-	local image_source = data:match('<image%s+[^>]-source="([^"]+)"')
-	local image_width = data:match('<image%s+[^>]-width="(%d+)"')
-	local image_height = data:match('<image%s+[^>]-height="(%d+)"')
+	local pre_tile = data:match("^(.-)%<tile") or data
+	local image_source = pre_tile:match('<image%s+[^>]-source="([^"]+)"')
+	local image_width = pre_tile:match('<image%s+[^>]-width="(%d+)"')
+	local image_height = pre_tile:match('<image%s+[^>]-height="(%d+)"')
 	if image_source then
 		tileset.image = image_source
 	end
@@ -64,12 +65,16 @@ local function parseTSX(data)
 	end
 
 	local tiles = {}
-	for id, tile_xml in data:gmatch('<tile%s+id="(%d+)"(.-)</tile>') do
+	for id, tile_xml in data:gmatch('<tile%s+id="(%d+)"([%s%S]-)</tile>') do
 		local tile = {id = tonumber(id)}
 		local tile_image = tile_xml:match('<image%s+[^>]-source="([^"]+)"')
 		if tile_image then
 			tile.image = tile_image
 		end
+		local tile_w = tile_xml:match('<image%s+[^>]-width="(%d+)"')
+		local tile_h = tile_xml:match('<image%s+[^>]-height="(%d+)"')
+		if tile_w then tile.width  = tonumber(tile_w) end
+		if tile_h then tile.height = tonumber(tile_h) end
 		local props = {}
 		for name, value in tile_xml:gmatch('<property%s+name="([^"]+)"%s+value="([^"]+)"%s*/>') do
 			props[name] = value
@@ -197,6 +202,15 @@ function Map:init(path, plugins, ox, oy)
                 ids[ j ] = tileset.tiles[j].id
             end
 
+            print(string.format("[STI] Atlas tileset='%s' tilecount=%d tiles_parsed=%d files=%d",
+                tileset.name or "?", tileset.tilecount or 0, #tileset.tiles, #files))
+
+            if #files == 0 then
+                print("[STI] ERROR: no files for atlas - skipping tileset " .. (tileset.name or "?"))
+                gid = gid + (tileset.tilecount or 0)
+                goto continue_tileset
+            end
+
             local map = atlas.Atlas( files, "ids", ids )
 
             if lg.isCreated then
@@ -213,6 +227,7 @@ function Map:init(path, plugins, ox, oy)
 
             gid = self:setAtlasTiles(i, tileset, map.coords, gid)
         end
+        ::continue_tileset::
 	end
 
 	local layers = {}

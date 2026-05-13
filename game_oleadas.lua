@@ -11,9 +11,8 @@ local stats       = { kills = 0, muertes = 0 }
 -- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {
     require("systems.maps.map"),
-    -- require("systems.maps.map_volcano"),
-    -- require("systems.maps.map_snow"),
-    -- require("systems.maps.map_city"),
+    require("systems.maps.map_volcan"),
+    require("systems.maps.map_nieve"),
 }
 
 Map = nil
@@ -199,6 +198,7 @@ function GameOleadas.draw()
     Bullet.draw()
     Effects.draw()
     Map.drawAbove()
+    if Map.drawDebug then Map.drawDebug() end
 
     love.graphics.pop()
     Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
@@ -384,6 +384,7 @@ function GameOleadas.keypressed(key, onEscape)
         return
     end
 
+    if key == "f3" and Map.toggleDebug then Map.toggleDebug() end
     if pausado then Pausa.keypressed(key); return end
     if key == "escape" then Pausa.open(); pausado = true; return end
 

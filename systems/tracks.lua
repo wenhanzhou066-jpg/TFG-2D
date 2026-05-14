@@ -14,12 +14,12 @@ function Tracks.load()
     sprites[2] = love.graphics.newImage("assets/images/PNG/Effects/Tire_Track_02.png")
 end
 
-local TRACK_SPAWN_OFFSET = 18 -- distance from center to trailing edge
-local TRACK_WIDTH = 14        -- reduced lateral distance to keep tracks inside hull
+local TRACK_SPAWN_OFFSET = 18 -- distancia desde el centro hasta el borde trasero
+local TRACK_WIDTH = 14        -- distancia lateral reducida para que las huellas queden dentro del casco
 
 function Tracks.spawn(x, y, angle, isReverse)
     local dir = isReverse and 1 or -1
-    -- Calculate position slightly behind the tank based on its orientation
+    -- Calcular la posición ligeramente detrás del tanque según su orientación
     local offsetX = math.cos(angle) * TRACK_SPAWN_OFFSET * dir
     local offsetY = math.sin(angle) * TRACK_SPAWN_OFFSET * dir
     

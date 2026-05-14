@@ -1,9 +1,9 @@
 -- systems/json.lua
--- Minimal JSON encoder/decoder for network communication
+-- Codificador/decodificador JSON mínimo para comunicación en red
 
 local json = {}
 
--- Encode Lua table to JSON string
+-- Codifica una tabla Lua a cadena JSON
 function json.encode(val)
     local t = type(val)
 
@@ -19,7 +19,7 @@ function json.encode(val)
         local is_array = true
         local count = 0
 
-        -- Check if it's an array or object
+        -- Comprobar si es un array u objeto
         for k, v in pairs(val) do
             count = count + 1
             if type(k) ~= "number" or k ~= count then
@@ -48,7 +48,7 @@ function json.encode(val)
     end
 end
 
--- Decode JSON string to Lua table
+-- Decodifica una cadena JSON a tabla Lua
 function json.decode(str)
     local pos = 1
 

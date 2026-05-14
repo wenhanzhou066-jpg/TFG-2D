@@ -86,7 +86,7 @@ function GameServer.new()
 
     self.udp = socket.udp()
     self.udp:setsockname(HOST, PORT)
-    self.udp:settimeout(0)  -- Non-blocking
+    self.udp:settimeout(0)  -- Sin bloqueo
 
     self.rooms = {}  -- {room_id = Room}
     self.addr_to_room = {}  -- {addr_key = room_id}
@@ -108,7 +108,7 @@ function GameServer:run()
         if data then
             self:handle_message(data, ip, port)
         else
-            -- No data, sleep briefly
+            -- Sin datos, esperar brevemente
             socket.sleep(0.001)
         end
     end

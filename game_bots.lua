@@ -152,10 +152,10 @@ function GameBots.drawHUD()
 
     love.graphics.setColor(1, 1, 1, 0.9)
     love.graphics.print("Dificultad: " .. nombreDif, 20, 20)
-    love.graphics.print("Bots: " .. Bot.contarVivos(), 20, 52) -- increased y for better spacing
+    love.graphics.print("Bots: " .. Bot.contarVivos(), 20, 52) -- y incrementado para mejor espaciado
 
     if Bot.contarVivos() == 0 then
-        love.graphics.setFont(UI.font("button")) -- Use a larger font for victory
+        love.graphics.setFont(UI.font("button")) -- Usar una fuente más grande para la pantalla de victoria
         love.graphics.setColor(0, 0, 0, 0.65)
         love.graphics.rectangle("fill", GAME_W/2-260, GAME_H/2-40, 520, 80, 8, 8)
         love.graphics.setColor(0.3, 1, 0.3)

@@ -121,13 +121,13 @@ local function clearBuildingTiles(w)
                 local th = (td and td.height) or stiMap.tileheight
                 local clear
                 if th > baseH then
-                    -- Tall building sprite: tile top extends (th-baseH) above its base row.
-                    -- Search from that theoretical maximum upward extent down to polygon bottom.
+                    -- Sprite de edificio alto: la cima del tile se extiende (th-baseH) por encima de su fila base.
+                    -- Buscar desde esa extensión teórica máxima hacia abajo hasta el borde inferior del polígono.
                     local y1 = w.y - (th - baseH)
                     clear = inst.x < w.x + w.w and inst.x + tw > w.x and
                             inst.y < w.y + w.h  and inst.y + th > y1
                 else
-                    -- Small tile (rock, bush, 64px decoration): only clear if inside polygon.
+                    -- Tile pequeño (roca, arbusto, decoración 64px): limpiar solo si está dentro del polígono.
                     clear = inst.x < w.x + w.w and inst.x + tw > w.x and
                             inst.y < w.y + w.h  and inst.y + th > w.y
                 end

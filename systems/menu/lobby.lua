@@ -12,16 +12,16 @@ local playerCount = 0
 local myPlayerId = nil
 local myRoomId = nil
 local countdown = 0
-local roomInput = "room1"  -- Default room name
+local roomInput = "room1"  -- Nombre de sala por defecto
 local mode = "join" -- "create" or "join"
 local leaveButtonHover = false
 local startButtonHover = false
 local gameMode = nil -- "1v1", "ffa", "2v2"
-local myTeam = 1 -- For 2v2: 1 or 2
+local myTeam = 1 -- Para 2v2: 1 o 2
 local teamButtonHover = {false, false}
-local isHost = false -- Player who created the room
-local connectionTimeout = 0 -- Timer for connection timeout
-local CONNECTION_TIMEOUT_SECONDS = 10 -- 10 seconds to connect
+local isHost = false -- Jugador que creó la sala
+local connectionTimeout = 0 -- Temporizador para tiempo límite de conexión
+local CONNECTION_TIMEOUT_SECONDS = 10 -- 10 segundos para conectar
 
 -- Fonts locales
 local fonts = {
@@ -51,7 +51,7 @@ function Lobby.load(escena, lobbyMode, params)
     mode = lobbyMode or "join" -- "create" or "join"
     params = params or {}
     gameMode = nil
-    isHost = (mode == "create") -- Creator is the host
+    isHost = (mode == "create") -- El creador es el anfitrión
     connectionTimeout = 0
 
     -- Cargar fonts
@@ -72,7 +72,7 @@ function Lobby.load(escena, lobbyMode, params)
             Red.conectar(params.room_name, params.metadata)
             addMessage("Creando sala '" .. params.room_name .. "'...")
             addMessage("Modo: " .. gameMode)
-            -- estado stays "connecting" until we receive welcome from server
+            -- el estado permanece "connecting" hasta recibir confirmación del servidor
         else
             addMessage("ERROR: No se pudo inicializar red")
             estado = "error"
@@ -81,13 +81,13 @@ function Lobby.load(escena, lobbyMode, params)
     elseif mode == "join" and params.room_name then
         roomInput = params.room_name
         myRoomId = params.room_name
-        gameMode = params.game_mode or "ffa" -- Get from room metadata
+        gameMode = params.game_mode or "ffa" -- Obtener de los metadatos de la sala
 
         local success = Red.init("217.78.237.7", 12345)
         if success then
             Red.conectar(params.room_name)
             addMessage("Uniéndose a sala '" .. params.room_name .. "'...")
-            -- estado stays "connecting" until we receive welcome from server
+            -- el estado permanece "connecting" hasta recibir confirmación del servidor
         else
             addMessage("ERROR: No se pudo inicializar red")
             estado = "error"
@@ -415,9 +415,9 @@ function Lobby.draw(escena)
         love.graphics.setLineWidth(2)
         love.graphics.rectangle("line", startButtonX, startButtonY, buttonW, buttonH, 10, 10)
         local textHeight = fonts.medium:getHeight()
-        local startText = "START GAME"
+        local startText = "INICIAR PARTIDA"
         if gameMode == "ffa" then
-            startText = startText .. string.format(" (%d+)", minPlayers)  -- "START GAME (2+)"
+            startText = startText .. string.format(" (%d+)", minPlayers)
         end
         love.graphics.printf(startText, startButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
 
@@ -432,7 +432,7 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("LEAVE", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf("SALIR", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
     else
         -- No anfitrión o no hay suficientes jugadores: Solo mostrar botón salir centrado
         local leaveButtonX = W/2 - buttonW/2
@@ -448,13 +448,13 @@ function Lobby.draw(escena)
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, leaveButtonY, buttonW, buttonH, 10, 10)
         local textHeight = fonts.medium:getHeight()
-        love.graphics.printf("LEAVE ROOM", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf("SALIR DE SALA", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
     end
 
     -- Indicación ESC
     love.graphics.setFont(fonts.small)
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[ESC] Back to menu", 0, H * 0.93, W, "center")
+    love.graphics.printf("[ESC] Volver al menú", 0, H * 0.93, W, "center")
 end
 
 function Lobby.keypressed(key, escena)

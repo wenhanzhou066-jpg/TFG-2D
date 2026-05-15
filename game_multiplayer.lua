@@ -11,6 +11,10 @@ local Pausa       = require("systems.pausa")
 local stats = { kills = 0, muertes = 0, victoria = false }
 local pausado = false
 
+local MAX_MUERTES = 3
+local eliminado = false
+local elimGoMenu = nil  -- guardado en keypressed/mousepressed para usarlo desde el overlay
+
 local Red = require("network")
 
 -- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
@@ -77,7 +81,7 @@ function GameMultiplayer.damageOtherTank(pid, damage)
 
         -- Checar si murió
         if oldHp > 0 and otherTanks[pid].hp <= 0 then
-            Effects.spawnExplosion(otherTanks[pid].x, otherTanks[pid].y, "tank", 40)
+            Effects.spawnExplosion(otherTanks[pid].x, otherTanks[pid].y)
             return true  -- Kill confirmado
         end
     end
@@ -103,10 +107,21 @@ end
 local otherTankSprites = {}
 
 function GameMultiplayer.addKill()   stats.kills   = stats.kills   + 1 end
-function GameMultiplayer.addMuerte() stats.muertes = stats.muertes + 1 end
+function GameMultiplayer.addMuerte()
+    stats.muertes = stats.muertes + 1
+    if stats.muertes >= MAX_MUERTES then
+        eliminado = true
+    end
+end
 
 function GameMultiplayer.load(mapIdx)
     stats = { kills = 0, muertes = 0, victoria = false }
+    eliminado = false
+    elimGoMenu = nil
+    otherTanks = {}
+    powerupNotification.active = false
+    powerupNotification.timer = 0
+    Red.in_game = true
     recalcView()
     if not gameCanvas then
         gameCanvas = love.graphics.newCanvas(GAME_W, GAME_H)
@@ -141,6 +156,14 @@ function GameMultiplayer.load(mapIdx)
         Tank.load(spawn.x, spawn.y)
     end
 
+    -- Override ammo to finite clip for multiplayer (single-player keeps 999)
+    local tanks = Tank.getTanks()
+    if tanks[1] then
+        tanks[1].maxAmmo = 6
+        tanks[1].ammo = 6
+        tanks[1].reloadDuration = 2.0
+    end
+
     -- Spawnar power-ups
     Powerup.clear()
     local powerupSpawns = Map.getPowerupSpawns()
@@ -149,12 +172,15 @@ function GameMultiplayer.load(mapIdx)
     end
 
     Audio.load(mapIdx or 1)
+    Minimap.load()
+    Pausa.load()
 
     -- La red ya está inicializada desde el lobby
     print("[MULTIPLAYER] Juego iniciado")
 end
 
 function GameMultiplayer.update(dt)
+    if eliminado then return end
     if pausado then
         Pausa.update(dt)
         return
@@ -193,13 +219,6 @@ function GameMultiplayer.update(dt)
 
     -- Recibir posiciones de otros jugadores
     local otherPlayers = Red.obtener_otros_jugadores()
-
-    -- Debug: contar otros jugadores
-    local count = 0
-    for _ in pairs(otherPlayers) do count = count + 1 end
-    if count > 0 then
-        print(string.format("[MULTIPLAYER] %d otro(s) jugador(es) detectado(s)", count))
-    end
 
     -- Actualizar posiciones objetivo de otros jugadores
     for pid, pdata in pairs(otherPlayers) do
@@ -258,6 +277,18 @@ function GameMultiplayer.update(dt)
     for _, bala in ipairs(balas_recibidas) do
         Bullet.spawn(bala.x, bala.y, bala.angulo, bala.tipo, "network")
     end
+
+    -- Procesar eventos de powerup del servidor (AUTH mode)
+    for _, ev in ipairs(Red.get_powerup_events()) do
+        if ev.kind == "collected" then
+            Powerup.removeByIndex(ev.index)
+            if ev.player_id == Red.id_jugador then
+                GameMultiplayer.showPowerupNotification(ev.powerup_type, 15)
+            end
+        elseif ev.kind == "spawn" then
+            Powerup.respawnByIndex(ev.index)
+        end
+    end
 end
 
 function GameMultiplayer.draw()
@@ -291,6 +322,75 @@ function GameMultiplayer.draw()
     love.graphics.setCanvas()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
+
+    if eliminado then
+        GameMultiplayer.drawEliminacionOverlay()
+    end
+
+    if pausado then
+        Pausa.draw()
+        local Remap = require("systems.controls_remap")
+        if Remap.isVisible() then
+            love.graphics.push()
+            love.graphics.translate(GameView.ox, GameView.oy)
+            love.graphics.scale(GameView.scale, GameView.scale)
+            Remap.draw()
+            love.graphics.pop()
+        end
+    end
+end
+
+function GameMultiplayer.drawEliminacionOverlay()
+    local sw, sh = love.graphics.getDimensions()
+    local UI = require("systems.ui")
+
+    -- Fondo oscuro semitransparente
+    love.graphics.setColor(0, 0, 0, 0.75)
+    love.graphics.rectangle("fill", 0, 0, sw, sh)
+
+    -- Panel central
+    local pw, ph = 520, 320
+    local px, py = sw/2 - pw/2, sh/2 - ph/2
+    love.graphics.setColor(0.08, 0.05, 0.05, 0.97)
+    love.graphics.rectangle("fill", px, py, pw, ph, 12, 12)
+    love.graphics.setColor(0.7, 0.1, 0.1, 1)
+    love.graphics.setLineWidth(3)
+    love.graphics.rectangle("line", px, py, pw, ph, 12, 12)
+    love.graphics.setLineWidth(1)
+
+    -- Título
+    local titleFont = UI.font("title") or UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(titleFont)
+    love.graphics.setColor(0.9, 0.15, 0.15, 1)
+    love.graphics.printf("ELIMINADO", px, py + 30, pw, "center")
+
+    -- Subtítulo
+    local bodyFont = UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(bodyFont)
+    love.graphics.setColor(0.85, 0.85, 0.85, 1)
+    love.graphics.printf("Has muerto " .. MAX_MUERTES .. " veces", px, py + 95, pw, "center")
+
+    -- Stats
+    local smallFont = UI.font("small") or love.graphics.getFont()
+    love.graphics.setFont(smallFont)
+    love.graphics.setColor(0.7, 0.7, 0.7, 1)
+    love.graphics.printf(
+        string.format("Bajas: %d   |   Muertes: %d", stats.kills, stats.muertes),
+        px, py + 145, pw, "center")
+
+    -- Botón volver al menú
+    local bw, bh = 260, 50
+    local bx, by = sw/2 - bw/2, py + 230
+    local mx, my = love.mouse.getPosition()
+    local hover = mx >= bx and mx <= bx+bw and my >= by and my <= by+bh
+
+    love.graphics.setColor(hover and 0.85 or 0.65, hover and 0.15 or 0.1, hover and 0.15 or 0.1, 1)
+    love.graphics.rectangle("fill", bx, by, bw, bh, 8, 8)
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setFont(bodyFont)
+    love.graphics.printf("Volver al menú", bx, by + 13, bw, "center")
+
+    love.graphics.setColor(1, 1, 1)
 end
 
 function GameMultiplayer.drawOtherTanks()
@@ -334,12 +434,12 @@ function GameMultiplayer.drawOtherTanks()
 
         -- Weapon
         love.graphics.push()
+        love.graphics.translate(15 * math.cos(tank.turretAngle), 15 * math.sin(tank.turretAngle))
         love.graphics.rotate(tank.turretAngle + math.pi/2)
         love.graphics.setColor(1, 1, 1)
         love.graphics.draw(
             otherTankSprites.weapon,
-            15 * math.cos(tank.turretAngle),
-            15 * math.sin(tank.turretAngle),
+            0, 0,
             0,
             escala, escala,
             otherTankSprites.weapon:getWidth()/2,
@@ -396,23 +496,8 @@ function GameMultiplayer.drawHUD()
         playerCount = playerCount + 1
     end
 
-    local myId = Red.id_jugador or "?"
-    love.graphics.print("MULTIJUGADOR | Tu ID: " .. myId .. " | Jugadores: " .. playerCount, 10, 10)
-
     -- Stats K/D
-    love.graphics.print(string.format("Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 30)
-
-    -- Debug info
-    local tx, ty = Tank.getPosition()
-    love.graphics.print(string.format("Pos: (%.0f, %.0f) | Conectado: %s",
-        tx, ty, Red.esta_conectado() and "SI" or "NO"), 10, 50)
-
-    -- Listar otros tanques (debug)
-    local y = 70
-    for pid, tank in pairs(otherTanks) do
-        love.graphics.print(string.format("  P%d: (%.0f, %.0f)", pid, tank.x, tank.y), 10, y)
-        y = y + 20
-    end
+    love.graphics.print(string.format("Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 10)
 
     -- Notificación de powerup (centrada arriba)
     if powerupNotification.active then
@@ -443,10 +528,77 @@ function GameMultiplayer.drawHUD()
         love.graphics.print(text, nx, ny)
     end
 
+    -- Ammo HUD (bottom-center)
+    local font = UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(font)
+
+    local ammo, maxAmmo, reloading, reloadTimer, reloadDuration = Tank.getAmmo()
+    local W = GAME_W
+    local H = GAME_H
+    local boxW, boxH, gap = 24, 28, 6
+    local totalW = maxAmmo * boxW + (maxAmmo - 1) * gap
+    local startX = W/2 - totalW/2
+    local boxY = H - 70
+
+    if reloading then
+        local progress = 1 - (reloadTimer / reloadDuration)
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", startX - 6, boxY - 6, totalW + 12, boxH + 12, 6)
+        love.graphics.setColor(0.9, 0.2, 0.2, 1)
+        love.graphics.rectangle("fill", startX, boxY, totalW * progress, boxH, 4)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle("line", startX, boxY, totalW, boxH, 4)
+        local txt = "RELOADING..."
+        local tw = font:getWidth(txt)
+        love.graphics.setColor(1, 0.4, 0.4, 1)
+        love.graphics.print(txt, W/2 - tw/2, boxY - 30)
+    else
+        for i = 1, maxAmmo do
+            local x = startX + (i - 1) * (boxW + gap)
+            if i <= ammo then
+                love.graphics.setColor(1.0, 0.85, 0.2, 1)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            else
+                love.graphics.setColor(0.2, 0.2, 0.2, 0.7)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0.6, 0.6, 0.6, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            end
+        end
+        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        local tw = font:getWidth(txt)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print(txt, W/2 - tw/2, boxY - 30)
+    end
+
     love.graphics.setColor(1, 1, 1)
 end
 
+local function goMenuEliminado()
+    if Perfil.activo then
+        leaderboard.enviarPartida(
+            Perfil.activo.gamertag,
+            stats.kills,
+            stats.muertes,
+            false,
+            "multi"
+        )
+    end
+    Red.desconectar()
+    eliminado = false
+    if elimGoMenu then elimGoMenu() end
+end
+
 function GameMultiplayer.keypressed(key, goMenu)
+    elimGoMenu = goMenu or elimGoMenu
+    if eliminado then
+        if key == "escape" or key == "return" or key == "space" then
+            goMenuEliminado()
+        end
+        return
+    end
     if pausado then
         Pausa.keypressed(key)
         local accion = Pausa.getAccion()
@@ -473,6 +625,11 @@ function GameMultiplayer.keypressed(key, goMenu)
         return
     end
 
+    if key == "r" then
+        Tank.reload()
+        return
+    end
+
     if key == "escape" then
         pausado = true
         Pausa.open()
@@ -480,6 +637,20 @@ function GameMultiplayer.keypressed(key, goMenu)
 end
 
 function GameMultiplayer.mousepressed(x, y, button, goMenu)
+    elimGoMenu = goMenu or elimGoMenu
+    if eliminado then
+        if button == 1 then
+            local sw, sh = love.graphics.getDimensions()
+            local pw, ph = 520, 320
+            local px, py = sw/2 - pw/2, sh/2 - ph/2
+            local bw, bh = 260, 50
+            local bx, by = sw/2 - bw/2, py + 230
+            if x >= bx and x <= bx+bw and y >= by and y <= by+bh then
+                goMenuEliminado()
+            end
+        end
+        return
+    end
     if pausado then
         Pausa.mousepressed(x, y, button)
         local accion = Pausa.getAccion()

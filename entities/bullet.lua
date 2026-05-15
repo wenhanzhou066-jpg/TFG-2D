@@ -1,6 +1,6 @@
 -- entities/bullet.lua
--- Pool de balas activas. Cada bala tiene posicion, velocidad, angulo,
--- tiempo de vida y owner ("player" o "bot").
+-- Pool de balas activas. Cada bala tiene posición, velocidad, ángulo,
+-- tiempo de vida y propietario ("player" o "bot").
 
 local Effects = require("systems.effects")
 local Perfil  = require("systems.perfil")
@@ -16,12 +16,15 @@ local spritesLoaded = false
 local active = {}
 local inactive = {} -- Pool de balas inactivas
 local count  = 0
+
+-- B2: Balas visuales en modo auth (indexadas por bullet_id del servidor)
+local visual_bullets = {}  -- {[bullet_id] = bullet_obj}
 local SPEED      = 600
 local LIFE       = 2.5
 local DRAW_SCALE = 0.4
 
 local Bot = nil
-local opponentChecker = nil  -- funcion(bx,by) para colision contra rival online
+local opponentChecker = nil  -- función(bx,by) para colisión contra oponente en línea
 local playerShellKey = "light"
 
 -- Tipos de balas
@@ -36,7 +39,7 @@ local BulletTypes = {
     shotgun = { speed = 800, life = 0.8, damage = 12, radius = 5, trail = false },
 }
 
--- mapeo: indice de arma (1-8) → clave de sprite de bala
+-- mapeo: índice de arma (1-8) → clave de sprite de bala
 local WEAPON_TO_SHELL = {
     "light",   -- 1: Viper
     "heavy",   -- 2: Thunder
@@ -48,7 +51,7 @@ local WEAPON_TO_SHELL = {
     "shotgun", -- 8: Oblivion
 }
 
--- registrar funcion de colision contra rival online
+-- registrar función de colisión contra oponente en línea
 function Bullet.setOpponentChecker(fn)
     opponentChecker = fn
 end
@@ -96,7 +99,7 @@ local function createBullet(x, y, angle, tipo, ownerId, ownerType, damage)
     b.radius = t.radius
     b.trail = t.trail
     b.ownerId = ownerId or "local"
-    b.owner = ownerType or "player" -- manteniendo "player" o "bot" para compatibilidad
+    b.owner = ownerType or "player" -- manteniendo "player" o "bot" por compatibilidad
     b.spawnTime = 0
     b.tintR = 1
     b.tintG = 1
@@ -104,11 +107,11 @@ local function createBullet(x, y, angle, tipo, ownerId, ownerType, damage)
     return b
 end
 
--- Spawnea una bala (Integrando sistemas de ambos)
+-- Genera una bala (integrando ambos sistemas)
 function Bullet.spawn(x, y, angle, tipo, owner, damage)
     if Audio then Audio.disparo() end
-    
-    -- Determinar tipo si no se proporciona (usar el arma del jugador si es 'player' o 'local')
+
+    -- Determinar tipo si no se proporciona (usar arma del jugador si es 'player' o 'local')
     if not tipo then
         tipo = (owner == "player" or owner == "local") and playerShellKey or "light"
     end
@@ -120,15 +123,34 @@ function Bullet.spawn(x, y, angle, tipo, owner, damage)
         b.tintG = Perfil.activo.colorAmmoG or 1
         b.tintB = Perfil.activo.colorAmmoB or 1
     end
-    
+
     count = count + 1
     active[count] = b
 end
 
+-- B2: Generar bala solo visual desde el servidor (modo auth)
+function Bullet.spawnVisual(bullet_id, owner_pid, x, y, angle, weapon_idx)
+    local weapon_type = WEAPON_TO_SHELL[weapon_idx] or "light"
+    local b = createBullet(x, y, angle, weapon_type, owner_pid, "network", nil)
+    b.visual_only = true  -- Marcar como no simulada
+    b.server_id = bullet_id
+
+    visual_bullets[bullet_id] = b
+end
+
+-- B2: Eliminar bala visual por id del servidor
+function Bullet.removeVisual(bullet_id)
+    local b = visual_bullets[bullet_id]
+    if b then
+        b.life = 0  -- Marcar para eliminación en el bucle de actualización
+        visual_bullets[bullet_id] = nil
+    end
+end
+
 local function checkTankHit(bx, by, bradius)
-    local Tank = require("entities.tank") -- cargamos aquí para evitar circulares
+    local Tank = require("entities.tank") -- cargado aquí para evitar dependencias circulares
     if not Tank or not Tank.getTanks then return false, nil end
-    
+
     for id, datos in pairs(Tank.getTanks()) do
         if not datos.isDead and not datos.invulnerable then
             local tx, ty, tradius = datos.x, datos.y, datos.radio
@@ -142,11 +164,11 @@ local function checkTankHit(bx, by, bradius)
             end
         end
     end
-    
+
     return false, nil
 end
 
--- Chequea colision con otros tanques (multiplayer
+-- Comprobar colisión con otros tanques (multijugador)
 local function checkOtherTanksHit(bx, by, bradius)
     if not GameMultiplayer or not GameMultiplayer.getOtherTanks then
         return false, nil
@@ -178,7 +200,7 @@ function Bullet.update(dt)
         local ok, m = pcall(require, "entities.bot")
         if ok then Bot = m end
     end
-    
+
     local Tank = require("entities.tank")
 
     local i = 1
@@ -191,12 +213,12 @@ function Bullet.update(dt)
 
         local destroyed = false
 
-        -- 1. Colisión con mapa
+        -- 1. Colisión con el mapa
         if not destroyed and Map.bulletHit(b.x, b.y, b.radius or 5) then
             destroyed = true
         end
 
-        -- 2. Colisión con Tanques Locales (si la bala no es nuestra)
+        -- 2. Colisión con tanques locales (si la bala no es nuestra)
         if not destroyed and b.spawnTime > 0.05 and b.ownerId ~= "local" then
             local hit, hitId = checkTankHit(b.x, b.y, b.radius or 5)
             if hit then
@@ -209,25 +231,14 @@ function Bullet.update(dt)
             end
         end
 
-        -- 3. Colisión con otros tanques (Multiplayer)
-        if not destroyed and b.ownerId == "local" then
+        -- 3. Colisión con otros tanques (Multijugador) — solo balas locales
+        if not destroyed and b.ownerId == "local" and b.spawnTime > 0.1 then
             local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius or 5)
-        -- Colision con Bots
-        elseif b.owner == "player" and Bot then
-            if Bot.checkHit(b.x, b.y, b.damage) then
-                destroyed = true
-            end
-
-        -- Colision con otros tanques (multiplayer, solo balas propias para visual feedback)
-        elseif b.spawnTime > 0.1 and b.ownerId == "local" then
-            local hit, pid, hitx, hity = checkOtherTanksHit(b.x, b.y, b.radius)
             if hit then
-                -- Feedback visual inmediato e intuitivo
                 Effects.spawnExplosion(hitx or b.x, hity or b.y, b.type, b.radius)
                 Effects.spawnDamageNumber(hitx or b.x, (hity or b.y) - 30, b.damage)
                 if Audio then Audio.explosion() end
 
-                -- Actualización "optimista" de HP
                 if GameMultiplayer and GameMultiplayer.damageOtherTank then
                     GameMultiplayer.damageOtherTank(pid, b.damage)
                 end
@@ -242,7 +253,7 @@ function Bullet.update(dt)
             end
         end
 
-        -- 5. Vida agotada
+        -- 5. Tiempo de vida expirado
         if not destroyed and b.life <= 0 then
             destroyed = true
         end
@@ -251,14 +262,26 @@ function Bullet.update(dt)
         if destroyed then
             Effects.spawnExplosion(b.x, b.y, b.type, b.radius)
             if Audio then Audio.explosion() end
-            
-            -- Lógica de Pool (mover bala inactiva)
+
+            -- Lógica del pool (mover bala a inactiva)
             table.insert(inactive, b)
             active[i] = active[count]
             active[count] = nil
             count = count - 1
         else
             i = i + 1
+        end
+    end
+
+    -- B2: Actualizar balas visuales (modo auth, solo renderizado, sin colisión)
+    for bullet_id, b in pairs(visual_bullets) do
+        b.x = b.x + b.vx * dt
+        b.y = b.y + b.vy * dt
+        b.life = b.life - dt
+        b.spawnTime = b.spawnTime + dt
+
+        if b.life <= 0 then
+            visual_bullets[bullet_id] = nil
         end
     end
 end
@@ -269,6 +292,13 @@ function Bullet.draw()
         love.graphics.setColor(b.tintR or 1, b.tintG or 1, b.tintB or 1)
         love.graphics.draw(b.img, b.x, b.y, b.angle + math.pi/2, DRAW_SCALE, DRAW_SCALE, b.ox, b.oy)
     end
+
+    -- B2: Dibujar balas visuales (modo auth)
+    for _, b in pairs(visual_bullets) do
+        love.graphics.setColor(b.tintR or 1, b.tintG or 1, b.tintB or 1)
+        love.graphics.draw(b.img, b.x, b.y, b.angle + math.pi/2, DRAW_SCALE, DRAW_SCALE, b.ox, b.oy)
+    end
+
     love.graphics.setColor(1, 1, 1)
 end
 

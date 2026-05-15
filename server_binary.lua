@@ -188,6 +188,9 @@ function GameServer:handle_connect(data, ip, port, addr_key)
     })
 
     self.udp:sendto(response, ip, port)
+
+    -- Broadcast updated player list so existing clients see the new joiner immediately
+    self:broadcast_state(room)
 end
 
 function GameServer:handle_update(data, ip, port, addr_key)

@@ -125,6 +125,11 @@ local function createTankData(sx, sy)
         shootCooldown = 0,
         shootDelay = 0.3,
         shootDelayBase = 0.3,  -- Cooldown base (para ammo boost)
+        ammo = 999,
+        maxAmmo = 999,
+        reloading = false,
+        reloadTimer = 0,
+        reloadDuration = 2.0,
         -- Powerups activos
         speedBoostTimer = 0,
         ammoBoostTimer = 0,
@@ -197,6 +202,15 @@ function tanque.update(dt)
 
             if datos.shootCooldown > 0 then
                 datos.shootCooldown = datos.shootCooldown - dt
+            end
+
+            if datos.reloading then
+                datos.reloadTimer = datos.reloadTimer - dt
+                if datos.reloadTimer <= 0 then
+                    datos.reloading = false
+                    datos.ammo = datos.maxAmmo
+                    datos.reloadTimer = 0
+                end
             end
 
             datos.isMoving = false
@@ -550,6 +564,9 @@ function tanque.respawn(id)
     datos.velocidad = 0
     datos.invulnerable = true
     datos.invulnTimer = 2.0
+    datos.ammo = datos.maxAmmo
+    datos.reloading = false
+    datos.reloadTimer = 0
 
     if Effects then
         Effects.spawnExplosion(datos.x, datos.y, "plasma", 32)
@@ -591,7 +608,10 @@ end
 function tanque.canShoot(id)
     local datos = tanks[id or 1]
     if not datos then return false end
-    return not datos.isDead and datos.shootCooldown <= 0
+    return not datos.isDead
+       and datos.shootCooldown <= 0
+       and not datos.reloading
+       and datos.ammo > 0
 end
 
 function tanque.shoot(id)
@@ -601,7 +621,29 @@ function tanque.shoot(id)
         return false
     end
     datos.shootCooldown = datos.shootDelay
+    datos.ammo = datos.ammo - 1
+    if datos.ammo <= 0 then
+        datos.reloading = true
+        datos.reloadTimer = datos.reloadDuration
+    end
     return true
+end
+
+function tanque.reload(id)
+    local datos = tanks[id or 1]
+    if not datos then return false end
+    if datos.isDead or datos.reloading then return false end
+    if datos.ammo >= datos.maxAmmo then return false end
+    datos.reloading = true
+    datos.reloadTimer = datos.reloadDuration
+    return true
+end
+
+function tanque.getAmmo(id)
+    local datos = tanks[id or 1]
+    if not datos then return 0, 0, false, 0, 1 end
+    return datos.ammo, datos.maxAmmo,
+           datos.reloading, datos.reloadTimer, datos.reloadDuration
 end
 
 -- Funciones para obtener info de ambos tanques en coop
@@ -637,6 +679,9 @@ function tanque.applyAmmoBoost(duration, id)
     if not datos or datos.isDead then return false end
     datos.shootDelay = datos.shootDelayBase * 0.5  -- Mitad de cooldown
     datos.ammoBoostTimer = duration
+    datos.ammo = datos.maxAmmo
+    datos.reloading = false
+    datos.reloadTimer = 0
     return true
 end
 

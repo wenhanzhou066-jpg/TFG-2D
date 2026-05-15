@@ -19,7 +19,9 @@ function Map.getSize() return {w=W, h=H} end
 local GROUND_LAYERS = {"terreno", "caminos", "rio", "decoracion"}
 local ABOVE_LAYERS  = {"arboles"}
 
-local BUILDING_TILE_LAYERS = {decoracion = true}
+-- Incluye "arboles" porque algunos sprites de edificio (tejados altos) se
+-- colocan ahí para quedar por encima del overlay de escombros.
+local BUILDING_TILE_LAYERS = {decoracion = true, arboles = true}
 
 local function objBounds(obj)
     if obj.polygon then

@@ -72,6 +72,9 @@ function Game.load(mapIdx)
         Tank.load(sp.x, sp.y)
     end
 
+    local tanks = Tank.getTanks()
+    if tanks[1] then tanks[1].maxAmmo = 6; tanks[1].ammo = 6; tanks[1].reloadDuration = 2.0 end
+
     -- Spawnar power-ups en el mapa
     Powerup.clear()
     local spawns = Map.getPowerupSpawns()
@@ -121,6 +124,7 @@ function Game.draw()
     Map.drawAbove()
     love.graphics.pop()
     Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
+    Game.drawAmmoHUD()
     love.graphics.setCanvas()
 
     -- Escalar el canvas al monitor con letterbox negro
@@ -132,6 +136,49 @@ function Game.draw()
                        0, GameView.scale, GameView.scale)
 
     Minimap.drawHUD(Camera.x, Camera.y, GameView)
+end
+
+function Game.drawAmmoHUD()
+    local UI = require("systems.ui")
+    local font = UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(font)
+    local ammo, maxAmmo, reloading, reloadTimer, reloadDuration = Tank.getAmmo()
+    local W, H = GAME_W, GAME_H
+    local boxW, boxH, gap = 24, 28, 6
+    local totalW = maxAmmo * boxW + (maxAmmo - 1) * gap
+    local startX = W/2 - totalW/2
+    local boxY = H - 70
+    if reloading then
+        local progress = 1 - (reloadTimer / reloadDuration)
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", startX - 6, boxY - 6, totalW + 12, boxH + 12, 6)
+        love.graphics.setColor(0.9, 0.2, 0.2, 1)
+        love.graphics.rectangle("fill", startX, boxY, totalW * progress, boxH, 4)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle("line", startX, boxY, totalW, boxH, 4)
+        local txt = "RELOADING..."
+        love.graphics.setColor(1, 0.4, 0.4, 1)
+        love.graphics.print(txt, W/2 - font:getWidth(txt)/2, boxY - 30)
+    else
+        for i = 1, maxAmmo do
+            local x = startX + (i - 1) * (boxW + gap)
+            if i <= ammo then
+                love.graphics.setColor(1.0, 0.85, 0.2, 1)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            else
+                love.graphics.setColor(0.2, 0.2, 0.2, 0.7)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0.6, 0.6, 0.6, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            end
+        end
+        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print(txt, W/2 - font:getWidth(txt)/2, boxY - 30)
+    end
+    love.graphics.setColor(1, 1, 1)
 end
 
 -- onEscape: funcion que main.lua pasa para volver al menu
@@ -147,6 +194,8 @@ function Game.keypressed(key, onEscape)
             )
         end
         onEscape()
+    elseif key == "r" then
+        Tank.reload()
     end
 end
 

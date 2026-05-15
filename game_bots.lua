@@ -18,6 +18,7 @@ local allMaps = {
 Map = nil
 Tank = require("entities.tank")
 Bullet = require("entities.bullet")
+Powerup = require("entities.powerup")
 Effects = require("systems.effects")
 Tracks = require("systems.tracks")
 Audio = require("systems.audio")
@@ -63,6 +64,9 @@ function GameBots.load(mapIdx, dificultad)
     else
         Tank.load(sp.x, sp.y)
     end
+
+    local tanks = Tank.getTanks()
+    if tanks[1] then tanks[1].maxAmmo = 6; tanks[1].ammo = 6; tanks[1].reloadDuration = 2.0 end
 
     Audio.load(mapIdx or 1)
     Minimap.load()
@@ -162,18 +166,58 @@ function GameBots.drawHUD()
         love.graphics.printf("¡Todos los bots eliminados!", GAME_W/2-260, GAME_H/2-14, 520, "center")
     end
 
+    -- Ammo HUD
+    local ammo, maxAmmo, reloading, reloadTimer, reloadDuration = Tank.getAmmo()
+    local fontA = UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(fontA)
+    local boxW, boxH, gap = 24, 28, 6
+    local totalW = maxAmmo * boxW + (maxAmmo - 1) * gap
+    local startX = GAME_W/2 - totalW/2
+    local boxY = GAME_H - 70
+    if reloading then
+        local progress = 1 - (reloadTimer / reloadDuration)
+        love.graphics.setColor(0, 0, 0, 0.7)
+        love.graphics.rectangle("fill", startX - 6, boxY - 6, totalW + 12, boxH + 12, 6)
+        love.graphics.setColor(0.9, 0.2, 0.2, 1)
+        love.graphics.rectangle("fill", startX, boxY, totalW * progress, boxH, 4)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.rectangle("line", startX, boxY, totalW, boxH, 4)
+        local txt = "RELOADING..."
+        love.graphics.setColor(1, 0.4, 0.4, 1)
+        love.graphics.print(txt, GAME_W/2 - fontA:getWidth(txt)/2, boxY - 30)
+    else
+        for i = 1, maxAmmo do
+            local x = startX + (i - 1) * (boxW + gap)
+            if i <= ammo then
+                love.graphics.setColor(1.0, 0.85, 0.2, 1)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0, 0, 0, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            else
+                love.graphics.setColor(0.2, 0.2, 0.2, 0.7)
+                love.graphics.rectangle("fill", x, boxY, boxW, boxH, 3)
+                love.graphics.setColor(0.6, 0.6, 0.6, 1)
+                love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
+            end
+        end
+        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        love.graphics.setColor(1, 1, 1, 1)
+        love.graphics.print(txt, GAME_W/2 - fontA:getWidth(txt)/2, boxY - 30)
+    end
+
     love.graphics.setColor(1, 1, 1)
 end
 
 function GameBots.keypressed(key, onEscape)
     GameBots._onEscape = onEscape
     if pausado then Pausa.keypressed(key); return end
+    if key == "r" then Tank.reload(); return end
     if key == "escape" then Pausa.open(); pausado = true end
 end
 
 function GameBots.mousepressed(x, y, button)
     if pausado then Pausa.mousepressed(x, y, button); return end
-    if button == 1 then
+    if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
         Bullet.spawn(bx, by, angle, nil, "player")
     end

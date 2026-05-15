@@ -6,6 +6,7 @@ local Game            = require("game")
 local GameMultiplayer = require("game_multiplayer")
 local GameOleadas     = require("game_oleadas")
 local GameBots        = require("game_bots")
+local Red             = require("network")
 
 local escena = "menu"
 
@@ -21,7 +22,7 @@ end
 
 local function startMultiplayer()
     Menu.stopMusic()
-    GameMultiplayer.load(randomMap())
+    GameMultiplayer.load(Red.map_idx or 1)
     escena = "multiplayer"
 end
 

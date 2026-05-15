@@ -5,7 +5,7 @@
 local Colision = require("systems.collision")
 
 local Bot = {}
-Bot.onKillCallback = nil   -- se asigna desde cada modo de juego
+Bot.onKillCallback = nil   -- asignado desde cada modo de juego
 
 local sprites = {}
 local spritesLoaded = false
@@ -93,7 +93,7 @@ local function girarHacia(actual, objetivo, velocidad, dt)
     else return actual - maxGiro end
 end
 
--- elige punto aleatorio libre evitando muros y rios
+-- elegir punto aleatorio libre evitando paredes y ríos
 local function puntoAleatorio()
     local mw, mh = 1920, 1080
     if Map and Map.getSize then
@@ -141,7 +141,7 @@ local function calcularPosicionesSpawn(cantidad, radio)
         local sx, sy
         local sp = (#spawns > 1) and spawns[((i-1) % (#spawns-1)) + 2] or {x = mw/2, y = mh/2}
         
-        -- Intentar encontrar un punto libre cerca del spawn
+        -- Buscar punto libre cerca del spawn
         local encontrado = false
         local intentos = 0
         local radioBusqueda = 150
@@ -157,12 +157,12 @@ local function calcularPosicionesSpawn(cantidad, radio)
                 sx, sy = tx, ty
                 encontrado = true
             else
-                -- Si no encontramos, ampliamos el rango de búsqueda ligeramente
+                -- Si no se encontró, ampliar ligeramente el radio de búsqueda
                 radioBusqueda = radioBusqueda + 20
             end
         end
         
-        -- Si después de muchos intentos no encontramos sitio libre, usamos el punto del spawn puro
+        -- Si tras muchos intentos no se encuentra punto libre, usar el spawn directo
         -- (o el último punto calculado) para no bloquear el juego
         if not encontrado then
             sx = sp.x
@@ -300,7 +300,7 @@ function Bot.update(dt)
                 b.estado = "ataca"; b.timerEstado = 0
                 b.dirStrafe = (math.random() > 0.5) and 1 or -1
             elseif d > dif.rangoPerdida or not Colision.lineOfSight(b.x, b.y, px, py) then
-                if d < dif.rangoPerdida * 1.5 then -- si no se ha ido muy lejos, investiga
+                if d < dif.rangoPerdida * 1.5 then -- si no se alejó demasiado, investigar
                     b.estado = "investiga"
                     b.ultimaPosX, b.ultimaPosY = px, py
                     b.timerEstado = 0
@@ -415,7 +415,7 @@ function Bot.update(dt)
             b.anguloTorreta = b.angulo
         end
 
-        -- esquiva de balas (solo dificil)
+        -- esquiva de balas (solo dificultad difícil)
         if dif.puedeEsquivar and not b.esquivando then
             local _, _, punteriaMuzzle = Tank.getMuzzlePos()
             local angAlBot = math.atan2(b.y-jy, b.x-jx)
@@ -455,7 +455,7 @@ function Bot.update(dt)
                 elseif not Colision.isBlocked(b.x, ny, r) then
                     b.y = ny
                 else
-                    -- bloqueado: busca salida
+                    -- bloqueado: buscar salida
                     b.objetivoX, b.objetivoY = puntoAleatorio()
                     b.esquivando = false
                 end

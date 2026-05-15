@@ -13,22 +13,16 @@ local myPlayerId = nil
 local myRoomId = nil
 local countdown = 0
 local roomInput = "room1"  -- Nombre de sala por defecto
-local mode = "join" -- "create" or "join"
+local mode = "join" -- "create" o "join"
 local leaveButtonHover = false
 local startButtonHover = false
 local gameMode = nil -- "1v1", "ffa", "2v2"
 local myTeam = 1 -- Para 2v2: 1 o 2
 local teamButtonHover = {false, false}
 local isHost = false -- Jugador que creó la sala
-local connectionTimeout = 0 -- Temporizador para tiempo límite de conexión
+local connectionTimeout = 0 -- Temporizador de timeout de conexión
 local CONNECTION_TIMEOUT_SECONDS = 10 -- 10 segundos para conectar
 
--- Fonts locales
-local fonts = {
-    big = nil,
-    medium = nil,
-    small = nil
-}
 
 local function addMessage(msg)
     table.insert(mensajes, 1, msg)
@@ -48,31 +42,27 @@ function Lobby.load(escena, lobbyMode, params)
     startButtonHover = false
     teamButtonHover = {false, false}
     myTeam = 1
-    mode = lobbyMode or "join" -- "create" or "join"
+    mode = lobbyMode or "join" -- "create" o "join"
     params = params or {}
     gameMode = nil
     isHost = (mode == "create") -- El creador es el anfitrión
     connectionTimeout = 0
 
-    -- Cargar fonts
-    local H = love.graphics.getHeight()
-    fonts.big = love.graphics.newFont(math.floor(H * 0.06))
-    fonts.medium = love.graphics.newFont(math.floor(H * 0.04))
-    fonts.small = love.graphics.newFont(math.floor(H * 0.025))
-    fonts.tiny = love.graphics.newFont(math.floor(H * 0.018))
+    UI.loadFonts()
 
     -- Conectar directamente con los parámetros recibidos
     if mode == "create" and params.room_name and params.metadata then
         roomInput = params.room_name
         myRoomId = params.room_name
         gameMode = params.metadata.game_mode
+        params.metadata.map_idx = love.math.random(1, 3)
 
         local success = Red.init("217.78.237.7", 12345)
         if success then
             Red.conectar(params.room_name, params.metadata)
             addMessage("Creando sala '" .. params.room_name .. "'...")
             addMessage("Modo: " .. gameMode)
-            -- el estado permanece "connecting" hasta recibir confirmación del servidor
+            -- estado permanece "connecting" hasta recibir bienvenida del servidor
         else
             addMessage("ERROR: No se pudo inicializar red")
             estado = "error"
@@ -81,13 +71,13 @@ function Lobby.load(escena, lobbyMode, params)
     elseif mode == "join" and params.room_name then
         roomInput = params.room_name
         myRoomId = params.room_name
-        gameMode = params.game_mode or "ffa" -- Obtener de los metadatos de la sala
+        gameMode = params.game_mode or "ffa" -- Obtener desde metadatos de la sala
 
         local success = Red.init("217.78.237.7", 12345)
         if success then
             Red.conectar(params.room_name)
             addMessage("Uniéndose a sala '" .. params.room_name .. "'...")
-            -- el estado permanece "connecting" hasta recibir confirmación del servidor
+            -- estado permanece "connecting" hasta recibir bienvenida del servidor
         else
             addMessage("ERROR: No se pudo inicializar red")
             estado = "error"
@@ -127,6 +117,7 @@ function Lobby.update(dt, escena)
                 addMessage("ERROR: Tiempo de conexión agotado")
                 addMessage("El servidor no responde en 217.78.237.7:12345")
                 addMessage("Verifica que el servidor esté corriendo")
+                Red.desconectar()
                 estado = "error"
             end
         end
@@ -136,6 +127,7 @@ function Lobby.update(dt, escena)
             myPlayerId = Red.id_jugador
             myRoomId = Red.id_sala or "default"
             estado = "waiting"
+            Red.in_game = true  -- trigger position sends so server broadcasts state to all clients
             addMessage("¡Conectado exitosamente!")
             addMessage("Tu ID de jugador: " .. myPlayerId)
         end
@@ -147,9 +139,9 @@ function Lobby.update(dt, escena)
             playerCount = playerCount + 1
         end
 
-        -- Auto-iniciar solo si la sala está llena (respeta max_players)
-        local maxPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 8
-        if playerCount >= maxPlayers and estado == "waiting" then
+        -- Auto-iniciar cuando haya suficientes jugadores (igual umbral que el botón START del host)
+        local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2
+        if playerCount >= minPlayers and estado == "waiting" then
             estado = "ready"
             countdown = 3
         end
@@ -186,12 +178,12 @@ function Lobby.draw(escena)
 
     if false then  -- room_select eliminado
         -- Pantalla de selección de sala
-        love.graphics.setFont(fonts.big)
+        love.graphics.setFont(UI.font("title"))
         love.graphics.setColor(1, 1, 1)
         local titleText = mode == "create" and "CREAR SALA" or "UNIRSE A SALA"
         love.graphics.printf(titleText, 0, H * 0.30, W, "center")
 
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.printf("Nombre de la sala:", 0, H * 0.42, W, "center")
 
         -- Caja de entrada
@@ -204,7 +196,7 @@ function Lobby.draw(escena)
         love.graphics.printf(roomInput, 0, H * 0.51, W, "center")
 
         -- Instrucciones
-        love.graphics.setFont(fonts.small)
+        love.graphics.setFont(UI.font("small"))
         love.graphics.setColor(0.7, 0.7, 0.7)
         if mode == "create" then
             love.graphics.printf("Presiona ENTER para crear la sala", 0, H * 0.65, W, "center")
@@ -218,7 +210,7 @@ function Lobby.draw(escena)
     end
 
     -- Estado
-    love.graphics.setFont(fonts.big)
+    love.graphics.setFont(UI.font("title"))
     local statusText = ""
     local statusColor = {1, 1, 1}
 
@@ -236,38 +228,49 @@ function Lobby.draw(escena)
         statusColor = {1, 0, 0}
     end
 
+    -- Panel de lista de jugadores (lado derecho) — calculado primero para saber cuánto espacio queda
+    local listPanelW = W * 0.22
+    local listPanelH = ph * 0.8
+    local listPanelX = panelX + pw - listPanelW - 20
+    local listPanelY = panelY + 20
+
+    -- Columna izquierda: desde el inicio del panel hasta el panel de lista
+    local leftColX = panelX
+    local leftColW = listPanelX - panelX - 20
+
     -- Calcular posiciones de contenido relativas al panel
     local contentY = panelY + ph * 0.15
 
     love.graphics.setColor(statusColor)
-    love.graphics.printf(statusText, 0, contentY, W, "center")
+    love.graphics.printf(statusText, leftColX, contentY, leftColW, "center")
 
-    -- ID del jugador (con más espaciado)
+    -- ID del jugador
     if myPlayerId then
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("ID: " .. myPlayerId, 0, contentY + 70, W, "center")
+        love.graphics.printf("ID: " .. myPlayerId, leftColX, contentY + 70, leftColW, "center")
     end
 
-    -- Modo de juego (con más espaciado)
+    -- Modo de juego
     local modeNames = { ["1v1"] = "1 vs 1", ["ffa"] = "Todos vs Todos", ["2v2"] = "2v2" }
     if gameMode then
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(0.7, 0.9, 1)
-        love.graphics.printf("Modo: " .. (modeNames[gameMode] or gameMode), 0, contentY + 120, W, "center")
+        love.graphics.printf("Modo: " .. (modeNames[gameMode] or gameMode), leftColX, contentY + 120, leftColW, "center")
     end
 
-    -- Selección de equipo para 2v2 (con más espaciado)
+    -- Selección de equipo para 2v2
     if gameMode == "2v2" and myPlayerId then
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Selecciona tu equipo:", 0, contentY + 170, W, "center")
+        love.graphics.printf("Selecciona tu equipo:", leftColX, contentY + 170, leftColW, "center")
 
-        local buttonW, buttonH = 180, 70
-        local spacing = 30
-        local team1X = W/2 - buttonW - spacing/2
-        local team2X = W/2 + spacing/2
-        local buttonY = contentY + 220
+        local buttonW, buttonH = 160, 60
+        local spacing = 20
+        local centerX = leftColX + leftColW / 2
+        local team1X = centerX - buttonW - spacing/2
+        local team2X = centerX + spacing/2
+        local buttonY = contentY + 215
 
         -- Botón Equipo 1
         if teamButtonHover[1] or myTeam == 1 then
@@ -287,8 +290,8 @@ function Lobby.draw(escena)
         love.graphics.rectangle("line", team1X, buttonY, buttonW, buttonH, 10, 10)
 
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(fonts.medium)
-        local textHeight = fonts.medium:getHeight()
+        love.graphics.setFont(UI.font("button"))
+        local textHeight = UI.font("button"):getHeight()
         love.graphics.printf("EQUIPO 1", team1X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
 
         -- Botón Equipo 2
@@ -309,23 +312,17 @@ function Lobby.draw(escena)
         love.graphics.rectangle("line", team2X, buttonY, buttonW, buttonH, 10, 10)
 
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.printf("EQUIPO 2", team2X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
     end
 
-    -- Contador de jugadores (con más espaciado)
-    local infoStartY = gameMode == "2v2" and contentY + 310 or contentY + 180
-    love.graphics.setFont(fonts.medium)
+    -- Contador de jugadores
+    local infoStartY = gameMode == "2v2" and contentY + 295 or contentY + 180
+    love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     local maxPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 8
     local playerText = string.format("Jugadores: %d / %d", playerCount, maxPlayers)
-    love.graphics.printf(playerText, 0, infoStartY, W, "center")
-
-    -- Panel de lista de jugadores (lado derecho)
-    local listPanelW = W * 0.25
-    local listPanelH = ph * 0.8
-    local listPanelX = panelX + pw - listPanelW - 20
-    local listPanelY = panelY + 20
+    love.graphics.printf(playerText, leftColX, infoStartY, leftColW, "center")
 
     love.graphics.setColor(0.1, 0.1, 0.1, 0.9)
     love.graphics.rectangle("fill", listPanelX, listPanelY, listPanelW, listPanelH, 8, 8)
@@ -335,7 +332,7 @@ function Lobby.draw(escena)
     love.graphics.rectangle("line", listPanelX, listPanelY, listPanelW, listPanelH, 8, 8)
 
     -- Título
-    love.graphics.setFont(fonts.medium)
+    love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("JUGADORES", listPanelX, listPanelY + 15, listPanelW, "center")
 
@@ -345,7 +342,7 @@ function Lobby.draw(escena)
     love.graphics.line(listPanelX + 15, listPanelY + 50, listPanelX + listPanelW - 15, listPanelY + 50)
 
     -- Lista de jugadores
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     local playerListY = listPanelY + 60
     local lineHeight = 35
 
@@ -356,7 +353,7 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(0.3, 1, 0.3)
         love.graphics.print("ID: " .. myPlayerId, listPanelX + 20, playerListY)
-        love.graphics.setFont(fonts.tiny or fonts.small)
+        love.graphics.setFont(UI.font("small"))
         love.graphics.setColor(0.7, 0.7, 0.7)
         love.graphics.print("(Tú)", listPanelX + 20, playerListY + 16)
 
@@ -366,7 +363,7 @@ function Lobby.draw(escena)
     -- Agregar otros jugadores
     local otherPlayers = Red.obtener_otros_jugadores()
     for pid, pdata in pairs(otherPlayers) do
-        love.graphics.setFont(fonts.small)
+        love.graphics.setFont(UI.font("small"))
         love.graphics.setColor(0.8, 0.8, 0.8)
         love.graphics.print("ID: " .. pid, listPanelX + 20, playerListY)
 
@@ -377,23 +374,23 @@ function Lobby.draw(escena)
     if playerCount < maxPlayers then
         for i = playerCount + 1, math.min(maxPlayers, playerCount + 3) do
             love.graphics.setColor(0.3, 0.3, 0.3)
-            love.graphics.setFont(fonts.small)
+            love.graphics.setFont(UI.font("small"))
             love.graphics.print("...", listPanelX + 20, playerListY)
             playerListY = playerListY + lineHeight
         end
     end
 
-    -- Mensajes de log eliminados - solo mostrar errores si los hay
+    -- Mensajes de error
     if estado == "error" then
-        love.graphics.setFont(fonts.small)
+        love.graphics.setFont(UI.font("small"))
         love.graphics.setColor(1, 0.3, 0.3)
         for i, msg in ipairs(mensajes) do
-            love.graphics.printf(msg, 0, infoStartY + 40 + (i-1) * 18, W, "center")
+            love.graphics.printf(msg, leftColX, infoStartY + 40 + (i-1) * 18, leftColW, "center")
         end
     end
 
     -- Botones inferiores
-    love.graphics.setFont(fonts.medium)
+    love.graphics.setFont(UI.font("button"))
     local buttonW, buttonH = 250, 60
     local buttonSpacing = 30
 
@@ -414,10 +411,10 @@ function Lobby.draw(escena)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setLineWidth(2)
         love.graphics.rectangle("line", startButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        local textHeight = fonts.medium:getHeight()
-        local startText = "INICIAR PARTIDA"
+        local textHeight = UI.font("button"):getHeight()
+        local startText = "START GAME"
         if gameMode == "ffa" then
-            startText = startText .. string.format(" (%d+)", minPlayers)
+            startText = startText .. string.format(" (%d+)", minPlayers)  -- "START GAME (2+)"
         end
         love.graphics.printf(startText, startButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
 
@@ -432,7 +429,7 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("SALIR", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf("LEAVE", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
     else
         -- No anfitrión o no hay suficientes jugadores: Solo mostrar botón salir centrado
         local leaveButtonX = W/2 - buttonW/2
@@ -447,14 +444,14 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, leaveButtonY, buttonW, buttonH, 10, 10)
-        local textHeight = fonts.medium:getHeight()
-        love.graphics.printf("SALIR DE SALA", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        local textHeight = UI.font("button"):getHeight()
+        love.graphics.printf("LEAVE ROOM", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
     end
 
     -- Indicación ESC
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[ESC] Volver al menú", 0, H * 0.93, W, "center")
+    love.graphics.printf("[ESC] Back to menu", 0, H * 0.93, W, "center")
 end
 
 function Lobby.keypressed(key, escena)
@@ -484,25 +481,26 @@ function Lobby.keypressed(key, escena)
 end
 
 function Lobby.mousemoved(x, y, escena)
-    -- No hacer nada
-end
-
-function Lobby.mousemoved(x, y, escena)
     local W = love.graphics.getWidth()
     local H = love.graphics.getHeight()
 
     -- Verificar hover de botones de equipo (para 2v2)
     if gameMode == "2v2" and myPlayerId then
-        -- Calcular posición de botones
         local pw, ph = W * 0.7, H * 0.75
+        local panelX = W/2 - pw/2
         local panelY = H/2 - ph/2
         local contentY = panelY + ph * 0.15
+        local listPanelW = W * 0.22
+        local listPanelX = panelX + pw - listPanelW - 20
+        local leftColX = panelX
+        local leftColW = listPanelX - panelX - 20
+        local centerX = leftColX + leftColW / 2
 
-        local buttonW, buttonH = 180, 70
-        local spacing = 30
-        local team1X = W/2 - buttonW - spacing/2
-        local team2X = W/2 + spacing/2
-        local buttonY = contentY + 220
+        local buttonW, buttonH = 160, 60
+        local spacing = 20
+        local team1X = centerX - buttonW - spacing/2
+        local team2X = centerX + spacing/2
+        local buttonY = contentY + 215
 
         teamButtonHover[1] = x >= team1X and x <= team1X + buttonW and
                              y >= buttonY and y <= buttonY + buttonH
@@ -544,16 +542,21 @@ function Lobby.mousepressed(x, y, btn, escena)
 
     -- Verificar clics en botones de equipo (para 2v2)
     if gameMode == "2v2" and myPlayerId and estado == "waiting" then
-        -- Calcular posición de botones
         local pw, ph = W * 0.7, H * 0.75
+        local panelX = W/2 - pw/2
         local panelY = H/2 - ph/2
         local contentY = panelY + ph * 0.15
+        local listPanelW = W * 0.22
+        local listPanelX = panelX + pw - listPanelW - 20
+        local leftColX = panelX
+        local leftColW = listPanelX - panelX - 20
+        local centerX = leftColX + leftColW / 2
 
-        local buttonW, buttonH = 180, 70
-        local spacing = 30
-        local team1X = W/2 - buttonW - spacing/2
-        local team2X = W/2 + spacing/2
-        local buttonY = contentY + 220
+        local buttonW, buttonH = 160, 60
+        local spacing = 20
+        local team1X = centerX - buttonW - spacing/2
+        local team2X = centerX + spacing/2
+        local buttonY = contentY + 215
 
         if x >= team1X and x <= team1X + buttonW and y >= buttonY and y <= buttonY + buttonH then
             myTeam = 1

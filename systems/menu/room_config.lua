@@ -15,24 +15,15 @@ local gameModes = {
     { id = "2v2", name = "Equipos 2v2", name_en = "Teams 2v2", max_players = 4, desc = "2 equipos de 2" },
 }
 
-local fonts = {
-    big = nil,
-    medium = nil,
-    small = nil
-}
+local FONT = "assets/menu/Military Poster.ttf"
 
 function RoomConfig.load(escena)
     selectedMode = 1
-    -- Generar ID de sala único: timestamp + aleatorio
     local timestamp = math.floor(os.time() % 10000)
     local random = math.random(100, 999)
     roomInput = "sala_" .. timestamp .. "_" .. random
-    creatingRoom = false  -- Reiniciar bandera
-
-    local H = love.graphics.getHeight()
-    fonts.big = love.graphics.newFont(math.floor(H * 0.06))
-    fonts.medium = love.graphics.newFont(math.floor(H * 0.04))
-    fonts.small = love.graphics.newFont(math.floor(H * 0.025))
+    creatingRoom = false
+    UI.loadFonts()
 end
 
 function RoomConfig.update(dt, escena)
@@ -62,7 +53,7 @@ function RoomConfig.draw(escena)
     local contentStartY = panelY + ph * 0.1
 
     -- Nombre de sala
-    love.graphics.setFont(fonts.medium)
+    love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Nombre de la Sala:", 0, contentStartY, W, "center")
 
@@ -73,12 +64,12 @@ function RoomConfig.draw(escena)
     love.graphics.rectangle("fill", boxX, boxY, boxW, boxH, 5, 5)
 
     love.graphics.setColor(1, 1, 1)
-    love.graphics.setFont(fonts.medium)
-    local textHeight = fonts.medium:getHeight()
+    love.graphics.setFont(UI.font("button"))
+    local textHeight = UI.font("button"):getHeight()
     love.graphics.printf(roomInput, boxX, boxY + (boxH - textHeight) / 2, boxW, "center")
 
     -- Modo de juego
-    love.graphics.setFont(fonts.medium)
+    love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     love.graphics.printf("Modo de Juego:", 0, contentStartY + 110, W, "center")
 
@@ -113,13 +104,13 @@ function RoomConfig.draw(escena)
 
         -- Texto centrado - solo el nombre del modo
         love.graphics.setColor(1, 1, 1)
-        love.graphics.setFont(fonts.medium)
-        local textHeight = fonts.medium:getHeight()
+        love.graphics.setFont(UI.font("button"))
+        local textHeight = UI.font("button"):getHeight()
         love.graphics.printf(mode.name, buttonX, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
     end
 
     -- Instrucciones
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
     love.graphics.printf("[←→] Cambiar modo  |  [ENTER] Crear sala  |  [ESC] Volver", 0, H * 0.90, W, "center")
 end

@@ -10,12 +10,6 @@ local searchInput = ""
 local selectedRoom = 1
 local scrollOffset = 0
 local refreshTimer = 0
-local fonts = {
-    big = nil,
-    medium = nil,
-    small = nil,
-    tiny = nil
-}
 
 local gameModeNames = {
     ["1v1"] = "1 vs 1",
@@ -35,11 +29,7 @@ function RoomBrowser.load(escena)
     scrollOffset = 0
     refreshTimer = 0
 
-    local H = love.graphics.getHeight()
-    fonts.big = love.graphics.newFont(math.floor(H * 0.06))
-    fonts.medium = love.graphics.newFont(math.floor(H * 0.04))
-    fonts.small = love.graphics.newFont(math.floor(H * 0.025))
-    fonts.tiny = love.graphics.newFont(math.floor(H * 0.02))
+    UI.loadFonts()
 
     -- Inicializar red y solicitar lista
     Red.init("217.78.237.7", 12345)
@@ -93,7 +83,7 @@ function RoomBrowser.draw(escena)
     love.graphics.setColor(0, 0, 0, 0.9)
     love.graphics.rectangle("fill", W * 0.1, H * 0.15, W * 0.8, H * 0.08, 10, 10)
 
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
     love.graphics.print("Buscar:", W * 0.12, H * 0.17)
 
@@ -101,12 +91,12 @@ function RoomBrowser.draw(escena)
     love.graphics.setColor(0.2, 0.2, 0.2)
     love.graphics.rectangle("fill", W * 0.22, H * 0.165, W * 0.6, H * 0.04, 5, 5)
 
-    love.graphics.setFont(fonts.medium)
+    love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     love.graphics.print(searchInput, W * 0.23, H * 0.167)
 
     -- Botón refrescar
-    love.graphics.setFont(fonts.tiny)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.3, 0.3, 0.8, 0.8)
     love.graphics.rectangle("fill", W * 0.84, H * 0.165, W * 0.05, H * 0.04, 5, 5)
     love.graphics.setColor(1, 1, 1)
@@ -117,7 +107,7 @@ function RoomBrowser.draw(escena)
     love.graphics.rectangle("fill", W * 0.1, H * 0.25, W * 0.8, H * 0.58, 10, 10)
 
     -- Encabezados
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.9, 0.9, 0.9)
     love.graphics.print("SALA", W * 0.13, H * 0.27)
     love.graphics.print("MODO", W * 0.42, H * 0.27)
@@ -136,10 +126,10 @@ function RoomBrowser.draw(escena)
     local maxVisible = 6
 
     if #rooms == 0 then
-        love.graphics.setFont(fonts.medium)
+        love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(0.5, 0.5, 0.5)
         love.graphics.printf("No hay salas disponibles", 0, H * 0.45, W, "center")
-        love.graphics.setFont(fonts.small)
+        love.graphics.setFont(UI.font("small"))
         love.graphics.printf("Crea una nueva sala o espera a que alguien cree una", 0, H * 0.50, W, "center")
     else
         for i = 1, math.min(maxVisible, #rooms) do
@@ -161,14 +151,14 @@ function RoomBrowser.draw(escena)
             end
 
             -- Nombre sala
-            love.graphics.setFont(fonts.medium)
+            love.graphics.setFont(UI.font("button"))
             love.graphics.setColor(isFull and 0.5 or 1, isFull and 0.5 or 1, isFull and 0.5 or 1)
-            local nameY = y + (rowHeight - fonts.medium:getHeight()) / 2 - 5
+            local nameY = y + (rowHeight - UI.font("button"):getHeight()) / 2 - 5
             love.graphics.print(room.room_id, W * 0.13, nameY)
 
             -- Modo
-            love.graphics.setFont(fonts.small)
-            local infoY = y + (rowHeight - fonts.small:getHeight()) / 2 - 3
+            love.graphics.setFont(UI.font("small"))
+            local infoY = y + (rowHeight - UI.font("small"):getHeight()) / 2 - 3
             local modeName = gameModeNames[room.game_mode] or room.game_mode
             love.graphics.print(modeName, W * 0.42, infoY)
 
@@ -184,7 +174,7 @@ function RoomBrowser.draw(escena)
 
         -- Indicador de scroll
         if #rooms > maxVisible then
-            love.graphics.setFont(fonts.tiny)
+            love.graphics.setFont(UI.font("small"))
             love.graphics.setColor(0.7, 0.7, 0.7)
             love.graphics.printf(string.format("Mostrando %d-%d de %d",
                 scrollOffset + 1,
@@ -195,7 +185,7 @@ function RoomBrowser.draw(escena)
     end
 
     -- Instrucciones
-    love.graphics.setFont(fonts.small)
+    love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
     love.graphics.printf("[↑↓] Navegar  |  [ENTER] Unirse  |  [F5] Refrescar  |  [ESC] Volver", 0, H * 0.90, W, "center")
 end

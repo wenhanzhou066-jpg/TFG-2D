@@ -67,6 +67,7 @@ function Perfil.registrar(gamertag, password, datos)
         color_ammo_r    = datos.colorAmmoR   or 1.0,
         color_ammo_g    = datos.colorAmmoG   or 0.8,
         color_ammo_b    = datos.colorAmmoB   or 0.2,
+        weapon_idx      = datos.weaponIdx    or 1,
     }
 
     -- Guardar localmente
@@ -112,6 +113,7 @@ function Perfil.autenticar(gamertag, password)
         colorAmmoR    = datos.color_ammo_r   or 1.0,
         colorAmmoG    = datos.color_ammo_g   or 0.8,
         colorAmmoB    = datos.color_ammo_b   or 0.2,
+        weaponIdx     = datos.weapon_idx     or 1,
     }
 end
 
@@ -128,6 +130,7 @@ function Perfil.actualizarPersonalizacion(gamertag, nuevoDatos)
     datos.color_ammo_r   = nuevoDatos.colorAmmoR   or datos.color_ammo_r
     datos.color_ammo_g   = nuevoDatos.colorAmmoG   or datos.color_ammo_g
     datos.color_ammo_b   = nuevoDatos.colorAmmoB   or datos.color_ammo_b
+    if nuevoDatos.weaponIdx then datos.weapon_idx = nuevoDatos.weaponIdx end
 
     local ok = love.filesystem.write(rutaPerfil(gamertag), serializar(datos))
     if not ok then return false end
@@ -143,6 +146,7 @@ function Perfil.actualizarPersonalizacion(gamertag, nuevoDatos)
         Perfil.activo.colorAmmoR   = datos.color_ammo_r
         Perfil.activo.colorAmmoG   = datos.color_ammo_g
         Perfil.activo.colorAmmoB   = datos.color_ammo_b
+        Perfil.activo.weaponIdx    = datos.weapon_idx or 1
     end
 
     -- Sincronizar colores con servidor (best-effort)

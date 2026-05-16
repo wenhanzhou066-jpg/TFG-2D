@@ -64,6 +64,7 @@ function Game.load(mapIdx)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
+        Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
         Powerup.load()
         Effects.load()
         Tracks.load()
@@ -174,7 +175,7 @@ function Game.drawAmmoHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, W/2 - font:getWidth(txt)/2, boxY - 30)
     end
@@ -202,7 +203,7 @@ end
 function Game.mousepressed(x, y, button)
     if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle, "light", "local")
+        Bullet.spawn(bx, by, angle, nil, "local")
         Effects.spawnSmoke(bx, by, angle)
     end
 end

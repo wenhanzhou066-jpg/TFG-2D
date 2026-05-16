@@ -18,8 +18,11 @@ local campoActivo = 1
 local cursorTimer = 0
 
 -- ── Modo perfil ───────────────────────────────────────────────────────────
-local seccionesPerfil = { "CUERPO", "TORRETA", "MUNICION" }
+local WEAPON_NAMES = { "Viper", "Thunder", "Railgun", "Inferno", "Cyclone", "Nova", "Hellfire", "Oblivion" }
+
+local seccionesPerfil = { "CUERPO", "TORRETA", "MUNICION", "ARMA" }
 local perfilSeccion   = 1
+local weaponIdx       = 1
 local colorBodyR, colorBodyG, colorBodyB = 1.0, 0.7, 0.2
 local colorTurretR, colorTurretG, colorTurretB = 0.9, 0.9, 0.9
 local colorAmmoR, colorAmmoG, colorAmmoB = 1.0, 0.8, 0.2
@@ -303,10 +306,10 @@ function Personalizar.draw(escena)
 
     -- ── Modo perfil ───────────────────────────────────────────────────────
     elseif modo == "perfil" then
-        -- Botones de sección en columna IZQUIERDA, alineados con los sliders
+        -- Botones de sección en columna IZQUIERDA, alineados con las filas
         local secW = W * 0.12
         local secX = W * 0.06
-        for i = 0, 2 do
+        for i = 0, 3 do
             local _, ry, _, rbh = geomColorRow(i, W, H)
             local sel = perfilSeccion == (i + 1)
             UI.button(
@@ -316,49 +319,88 @@ function Personalizar.draw(escena)
             if sel then UI.drawSelector(secX, ry, rbh, tiempo) end
         end
 
-        -- Sliders R/G/B
-        local rowLabels = { "R", "G", "B" }
-        local rowVals   = { colorR, colorG, colorB }
-        for row = 0, 2 do
-            drawColorRow(row, rowLabels[row + 1], rowVals[row + 1],
-                         opcionPerfil == (row + 1), tiempo, escena)
-        end
+        if perfilSeccion <= 3 then
+            -- Sliders R/G/B
+            local rowLabels = { "R", "G", "B" }
+            local rowVals   = { colorR, colorG, colorB }
+            for row = 0, 2 do
+                drawColorRow(row, rowLabels[row + 1], rowVals[row + 1],
+                             opcionPerfil == (row + 1), tiempo, escena)
+            end
 
-        -- Previews de color a la DERECHA de los sliders
-        local previewW = W * 0.10
-        local previewX = W / 2 + W * 0.38 / 2 + W * 0.02
-        local previewBodyR   = (perfilSeccion == 1) and colorR or colorBodyR
-        local previewBodyG   = (perfilSeccion == 1) and colorG or colorBodyG
-        local previewBodyB   = (perfilSeccion == 1) and colorB or colorBodyB
-        local previewTurretR = (perfilSeccion == 2) and colorR or colorTurretR
-        local previewTurretG = (perfilSeccion == 2) and colorG or colorTurretG
-        local previewTurretB = (perfilSeccion == 2) and colorB or colorTurretB
-        local previewAmmoR   = (perfilSeccion == 3) and colorR or colorAmmoR
-        local previewAmmoG   = (perfilSeccion == 3) and colorG or colorAmmoG
-        local previewAmmoB   = (perfilSeccion == 3) and colorB or colorAmmoB
-        local previewColors  = {
-            { previewBodyR,   previewBodyG,   previewBodyB   },
-            { previewTurretR, previewTurretG, previewTurretB },
-            { previewAmmoR,   previewAmmoG,   previewAmmoB   },
-        }
-        local fsmall = UI.font("small")
-        local previewLabels = { "CUERPO", "TORRETA", "MUNICION" }
-        for i = 0, 2 do
-            local _, ry, _, rbh = geomColorRow(i, W, H)
-            local c = previewColors[i + 1]
-            love.graphics.setColor(c[1], c[2], c[3], 1)
-            love.graphics.rectangle("fill", previewX, ry, previewW, rbh, 6)
+            -- Previews de color a la DERECHA de los sliders
+            local previewW = W * 0.10
+            local previewX = W / 2 + W * 0.38 / 2 + W * 0.02
+            local previewBodyR   = (perfilSeccion == 1) and colorR or colorBodyR
+            local previewBodyG   = (perfilSeccion == 1) and colorG or colorBodyG
+            local previewBodyB   = (perfilSeccion == 1) and colorB or colorBodyB
+            local previewTurretR = (perfilSeccion == 2) and colorR or colorTurretR
+            local previewTurretG = (perfilSeccion == 2) and colorG or colorTurretG
+            local previewTurretB = (perfilSeccion == 2) and colorB or colorTurretB
+            local previewAmmoR   = (perfilSeccion == 3) and colorR or colorAmmoR
+            local previewAmmoG   = (perfilSeccion == 3) and colorG or colorAmmoG
+            local previewAmmoB   = (perfilSeccion == 3) and colorB or colorAmmoB
+            local previewColors  = {
+                { previewBodyR,   previewBodyG,   previewBodyB   },
+                { previewTurretR, previewTurretG, previewTurretB },
+                { previewAmmoR,   previewAmmoG,   previewAmmoB   },
+            }
+            local fsmall = UI.font("small")
+            local previewLabels = { "CUERPO", "TORRETA", "MUNICION" }
+            for i = 0, 2 do
+                local _, ry, _, rbh = geomColorRow(i, W, H)
+                local c = previewColors[i + 1]
+                love.graphics.setColor(c[1], c[2], c[3], 1)
+                love.graphics.rectangle("fill", previewX, ry, previewW, rbh, 6)
+                love.graphics.setColor(UI.colors.goldDark)
+                love.graphics.rectangle("line", previewX, ry, previewW, rbh, 6)
+                love.graphics.setFont(fsmall)
+                love.graphics.setColor(UI.colors.khaki)
+                love.graphics.print(previewLabels[i + 1], previewX + 6, ry + 6)
+            end
+            love.graphics.setColor(1, 1, 1)
+        else
+            -- Selector de arma (sección 4)
+            local f    = UI.font("button")
+            local bw   = W * 0.38
+            local bh   = f:getHeight() + math.floor(f:getHeight() * 0.55) * 2
+            local cx   = W / 2
+            local _, wy, _, _ = geomColorRow(0, W, H)
+            local arrowW = W * 0.05
+
+            -- flecha izquierda
+            local selL = opcionPerfil == 1
+            UI.button(escena.botonImg(), cx - bw / 2 - arrowW - W * 0.01, wy, arrowW, bh,
+                      "<", selL, tiempo, false, escena.botonExitImg())
+
+            -- nombre del arma
+            love.graphics.setColor(UI.colors.sliderBg)
+            love.graphics.rectangle("fill", cx - bw / 2, wy, bw, bh, 4)
             love.graphics.setColor(UI.colors.goldDark)
-            love.graphics.rectangle("line", previewX, ry, previewW, rbh, 6)
-            love.graphics.setFont(fsmall)
+            love.graphics.rectangle("line", cx - bw / 2, wy, bw, bh, 4)
+            love.graphics.setFont(f)
+            love.graphics.setColor(UI.colors.cream)
+            local wname = WEAPON_NAMES[weaponIdx] or "?"
+            love.graphics.print(wname, cx - f:getWidth(wname) / 2, wy + bh / 2 - f:getHeight() / 2)
+
+            -- índice "X / 8"
+            local fsmall2 = UI.font("small")
+            love.graphics.setFont(fsmall2)
             love.graphics.setColor(UI.colors.khaki)
-            love.graphics.print(previewLabels[i + 1], previewX + 6, ry + 6)
+            local idxStr = weaponIdx .. " / " .. #WEAPON_NAMES
+            love.graphics.print(idxStr, cx - fsmall2:getWidth(idxStr) / 2, wy + bh + 6)
+
+            -- flecha derecha
+            local selR = opcionPerfil == 2
+            UI.button(escena.botonImg(), cx + bw / 2 + W * 0.01, wy, arrowW, bh,
+                      ">", selR, tiempo, false, escena.botonExitImg())
+
+            love.graphics.setColor(1, 1, 1)
         end
-        love.graphics.setColor(1, 1, 1)
 
         -- Botones en fila horizontal: VOLVER | GUARDAR | (gap) CERRAR SESION
         local _, _, _, _, _, _, rowH = geomColorRow(0, W, H)
-        local baseY   = H * 0.27 + 3 * rowH + H * 0.028
+        local baseY   = H * 0.27 + 4 * rowH + H * 0.028
         local bh      = H * 0.075 * 0.72
         local bwSmall = W * 0.17
         local bwLarge = W * 0.20
@@ -446,6 +488,7 @@ function Personalizar.keypressed(key, escena)
                 colorAmmoR   = Perfil.activo.colorAmmoR
                 colorAmmoG   = Perfil.activo.colorAmmoG
                 colorAmmoB   = Perfil.activo.colorAmmoB
+                weaponIdx    = Perfil.activo.weaponIdx or 1
                 perfilSeccion = 1
                 setEditingColorFromSection()
                 opcionPerfil = 1; modo = "perfil"; Audio.clickMenu()
@@ -488,12 +531,13 @@ function Personalizar.keypressed(key, escena)
         end
 
     elseif modo == "perfil" then
-        -- 1..3 = sliders, 4..6 = botones
-        local total = 6
+        -- sección 1-3: 1..3=sliders, 4..6=botones ; sección 4: 1=prev,2=next, 4..6=botones
+        local total = (perfilSeccion <= 3) and 6 or 6
         if key == "tab" then
-            storeEditingColorToSection()
+            if perfilSeccion <= 3 then storeEditingColorToSection() end
             perfilSeccion = perfilSeccion % #seccionesPerfil + 1
-            setEditingColorFromSection()
+            if perfilSeccion <= 3 then setEditingColorFromSection() end
+            opcionPerfil = 1
             Audio.hoverMenu()
 
         elseif key == "up" then
@@ -503,20 +547,35 @@ function Personalizar.keypressed(key, escena)
             opcionPerfil = math.min(total, opcionPerfil + 1); Audio.hoverMenu()
 
         elseif key == "right" then
-            local step = 0.04
-            if     opcionPerfil == 1 then colorR = math.min(1, colorR + step); Audio.clickMenu()
-            elseif opcionPerfil == 2 then colorG = math.min(1, colorG + step); Audio.clickMenu()
-            elseif opcionPerfil == 3 then colorB = math.min(1, colorB + step); Audio.clickMenu()
+            if perfilSeccion <= 3 then
+                local step = 0.04
+                if     opcionPerfil == 1 then colorR = math.min(1, colorR + step); Audio.clickMenu()
+                elseif opcionPerfil == 2 then colorG = math.min(1, colorG + step); Audio.clickMenu()
+                elseif opcionPerfil == 3 then colorB = math.min(1, colorB + step); Audio.clickMenu()
+                end
+            else
+                weaponIdx = weaponIdx % #WEAPON_NAMES + 1; Audio.clickMenu()
             end
 
         elseif key == "left" then
-            local step = 0.04
-            if     opcionPerfil == 1 then colorR = math.max(0, colorR - step); Audio.clickMenu()
-            elseif opcionPerfil == 2 then colorG = math.max(0, colorG - step); Audio.clickMenu()
-            elseif opcionPerfil == 3 then colorB = math.max(0, colorB - step); Audio.clickMenu()
+            if perfilSeccion <= 3 then
+                local step = 0.04
+                if     opcionPerfil == 1 then colorR = math.max(0, colorR - step); Audio.clickMenu()
+                elseif opcionPerfil == 2 then colorG = math.max(0, colorG - step); Audio.clickMenu()
+                elseif opcionPerfil == 3 then colorB = math.max(0, colorB - step); Audio.clickMenu()
+                end
+            else
+                weaponIdx = (weaponIdx - 2) % #WEAPON_NAMES + 1; Audio.clickMenu()
             end
 
         elseif key == "return" or key == "kpenter" then
+            if perfilSeccion == 4 then
+                if opcionPerfil == 1 then
+                    weaponIdx = (weaponIdx - 2) % #WEAPON_NAMES + 1; Audio.clickMenu()
+                elseif opcionPerfil == 2 then
+                    weaponIdx = weaponIdx % #WEAPON_NAMES + 1; Audio.clickMenu()
+                end
+            end
             if opcionPerfil == 4 then           -- Guardar
                 if Perfil.activo then
                     storeEditingColorToSection()
@@ -530,6 +589,7 @@ function Personalizar.keypressed(key, escena)
                         colorAmmoR   = colorAmmoR,
                         colorAmmoG   = colorAmmoG,
                         colorAmmoB   = colorAmmoB,
+                        weaponIdx    = weaponIdx,
                     })
                 end
                 setMsg("Personalizacion guardada", true)
@@ -636,48 +696,70 @@ function Personalizar.mousepressed(mx, my, btn, escena)
         end
 
     elseif modo == "perfil" then
-        -- Sección: columna izquierda alineada con sliders
+        -- Sección: columna izquierda alineada con las filas
         local secW = W * 0.12
         local secX = W * 0.06
-        for i = 0, 2 do
+        for i = 0, 3 do
             local _, ry, _, rbh = geomColorRow(i, W, H)
             if mx >= secX and mx <= secX + secW and my >= ry and my <= ry + rbh then
-                storeEditingColorToSection()
+                if perfilSeccion <= 3 then storeEditingColorToSection() end
                 perfilSeccion = i + 1
-                setEditingColorFromSection()
+                if perfilSeccion <= 3 then setEditingColorFromSection() end
+                opcionPerfil = 1
                 Audio.clickMenu()
                 return
+            end
+        end
+
+        -- Flechas del selector de arma (sección 4)
+        if perfilSeccion == 4 then
+            local f    = UI.font("button")
+            local bw   = W * 0.38
+            local bh   = f:getHeight() + math.floor(f:getHeight() * 0.55) * 2
+            local cx   = W / 2
+            local _, wy, _, _ = geomColorRow(0, W, H)
+            local arrowW = W * 0.05
+            local lx = cx - bw / 2 - arrowW - W * 0.01
+            local rx = cx + bw / 2 + W * 0.01
+            if my >= wy and my <= wy + bh then
+                if mx >= lx and mx <= lx + arrowW then
+                    weaponIdx = (weaponIdx - 2) % #WEAPON_NAMES + 1; Audio.clickMenu(); return
+                elseif mx >= rx and mx <= rx + arrowW then
+                    weaponIdx = weaponIdx % #WEAPON_NAMES + 1; Audio.clickMenu(); return
+                end
             end
         end
 
         local f  = UI.font("button")
         local bh = f:getHeight() + math.floor(f:getHeight() * 0.55) * 2
 
-        -- Clic en slider bars
-        local clavesSlider = { "r", "g", "b" }
-        for row = 0, 2 do
-            local sx, sy, sw, _, barY, slH = geomColorRow(row, W, H)
-            if mx >= sx and mx <= sx + sw and my >= barY and my <= barY + slH + 4 then
-                arrastrando = clavesSlider[row + 1]
-                local val = math.max(0, math.min(1, (mx - sx) / sw))
-                if     row == 0 then colorR = val
-                elseif row == 1 then colorG = val
-                else                 colorB = val end
-                opcionPerfil = row + 1
-                Audio.clickMenu()
-                return
-            end
-            -- Clic en la zona del botón de la fila (label+valor) también selecciona
-            if mx >= sx and mx <= sx + sw and my >= sy and my <= sy + bh then
-                opcionPerfil = row + 1
-                Audio.hoverMenu()
-                return
+        -- Clic en slider bars (solo secciones de color)
+        if perfilSeccion <= 3 then
+            local clavesSlider = { "r", "g", "b" }
+            for row = 0, 2 do
+                local sx, sy, sw, _, barY, slH = geomColorRow(row, W, H)
+                if mx >= sx and mx <= sx + sw and my >= barY and my <= barY + slH + 4 then
+                    arrastrando = clavesSlider[row + 1]
+                    local val = math.max(0, math.min(1, (mx - sx) / sw))
+                    if     row == 0 then colorR = val
+                    elseif row == 1 then colorG = val
+                    else                 colorB = val end
+                    opcionPerfil = row + 1
+                    Audio.clickMenu()
+                    return
+                end
+                -- Clic en la zona del botón de la fila (label+valor) también selecciona
+                if mx >= sx and mx <= sx + sw and my >= sy and my <= sy + bh then
+                    opcionPerfil = row + 1
+                    Audio.hoverMenu()
+                    return
+                end
             end
         end
 
         -- Botones en fila horizontal: VOLVER | GUARDAR | (bigGap) CERRAR SESION
         local _, _, _, _, _, _, rowH = geomColorRow(0, W, H)
-        local baseY   = H * 0.27 + 3 * rowH + H * 0.028
+        local baseY   = H * 0.27 + 4 * rowH + H * 0.028
         local btnH    = H * 0.075 * 0.72
         local bwSmall = W * 0.17
         local bwLarge = W * 0.20

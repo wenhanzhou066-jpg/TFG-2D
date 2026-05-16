@@ -58,6 +58,7 @@ function GameBots.load(mapIdx, dificultad)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
+        Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
@@ -200,7 +201,7 @@ function GameBots.drawHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, GAME_W/2 - fontA:getWidth(txt)/2, boxY - 30)
     end

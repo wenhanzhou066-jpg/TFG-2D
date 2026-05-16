@@ -234,12 +234,21 @@ function Lobby.draw(escena)
     local listPanelX = panelX + pw - listPanelW - 20
     local listPanelY = panelY + 20
 
-    -- Columna izquierda: desde el inicio del panel hasta el panel de lista
-    local leftColX = panelX
-    local leftColW = listPanelX - panelX - 20
+    -- Columna izquierda: con padding interior
+    local leftPad = 20
+    local leftColX = panelX + leftPad
+    local leftColW = listPanelX - panelX - leftPad - 20
 
-    -- Calcular posiciones de contenido relativas al panel
-    local contentY = panelY + ph * 0.15
+    -- Espaciado basado en altura real de fuentes (evita solapamiento del título)
+    local titleFontH = UI.font("title"):getHeight()
+    local buttonFontH = UI.font("button"):getHeight()
+    local gap = math.floor(H * 0.018)
+    local contentY = panelY + ph * 0.08
+
+    local idY = contentY + titleFontH + gap
+    local modoY = idY + buttonFontH + gap
+    local selectTeamY = modoY + buttonFontH + gap
+    local teamButtonsY = selectTeamY + buttonFontH + gap
 
     love.graphics.setColor(statusColor)
     love.graphics.printf(statusText, leftColX, contentY, leftColW, "center")
@@ -248,7 +257,7 @@ function Lobby.draw(escena)
     if myPlayerId then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("ID: " .. myPlayerId, leftColX, contentY + 70, leftColW, "center")
+        love.graphics.printf("ID: " .. myPlayerId, leftColX, idY, leftColW, "center")
     end
 
     -- Modo de juego
@@ -256,21 +265,21 @@ function Lobby.draw(escena)
     if gameMode then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(0.7, 0.9, 1)
-        love.graphics.printf("Modo: " .. (modeNames[gameMode] or gameMode), leftColX, contentY + 120, leftColW, "center")
+        love.graphics.printf("Modo: " .. (modeNames[gameMode] or gameMode), leftColX, modoY, leftColW, "center")
     end
 
     -- Selección de equipo para 2v2
     if gameMode == "2v2" and myPlayerId then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Selecciona tu equipo:", leftColX, contentY + 170, leftColW, "center")
+        love.graphics.printf("Selecciona tu equipo:", leftColX, selectTeamY, leftColW, "center")
 
-        local buttonW, buttonH = 160, 60
+        local buttonW, buttonH = 160, 55
         local spacing = 20
         local centerX = leftColX + leftColW / 2
         local team1X = centerX - buttonW - spacing/2
         local team2X = centerX + spacing/2
-        local buttonY = contentY + 215
+        local buttonY = teamButtonsY
 
         -- Botón Equipo 1
         if teamButtonHover[1] or myTeam == 1 then
@@ -317,7 +326,7 @@ function Lobby.draw(escena)
     end
 
     -- Contador de jugadores
-    local infoStartY = gameMode == "2v2" and contentY + 295 or contentY + 180
+    local infoStartY = gameMode == "2v2" and (teamButtonsY + 55 + gap) or (modoY + buttonFontH + gap)
     love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     local maxPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 8
@@ -394,58 +403,55 @@ function Lobby.draw(escena)
     local buttonW, buttonH = 250, 60
     local buttonSpacing = 30
 
-    -- Anfitrión: Mostrar botón Iniciar Juego
-    local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2  -- FFA min 2
-    if isHost and estado == "waiting" and playerCount >= minPlayers then
+    -- Anfitrión: Mostrar botón Iniciar Juego (siempre visible, gris si faltan jugadores)
+    local minPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 2
+    local canStart = playerCount >= minPlayers
+    local buttonY = H * 0.83
+    local textHeight = UI.font("button"):getHeight()
+
+    if isHost and estado == "waiting" then
         local startButtonX = W/2 - buttonW - buttonSpacing/2
-        local startButtonY = H * 0.83
+        local leaveButtonX  = W/2 + buttonSpacing/2
 
-        -- Botón Iniciar
-        if startButtonHover then
-            love.graphics.setColor(0.2, 0.8, 0.2, 0.9)
+        -- Botón Iniciar (gris si no hay suficientes jugadores)
+        if canStart then
+            love.graphics.setColor(startButtonHover and 0.2 or 0.1,
+                                   startButtonHover and 0.8 or 0.6,
+                                   startButtonHover and 0.2 or 0.1, 0.9)
         else
-            love.graphics.setColor(0.1, 0.6, 0.1, 0.8)
+            love.graphics.setColor(0.25, 0.25, 0.25, 0.7)
         end
-        love.graphics.rectangle("fill", startButtonX, startButtonY, buttonW, buttonH, 10, 10)
-
-        love.graphics.setColor(1, 1, 1)
+        love.graphics.rectangle("fill", startButtonX, buttonY, buttonW, buttonH, 10, 10)
+        love.graphics.setColor(canStart and 1 or 0.5, canStart and 1 or 0.5, canStart and 1 or 0.5)
         love.graphics.setLineWidth(2)
-        love.graphics.rectangle("line", startButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        local textHeight = UI.font("button"):getHeight()
-        local startText = "START GAME"
-        if gameMode == "ffa" then
-            startText = startText .. string.format(" (%d+)", minPlayers)  -- "START GAME (2+)"
-        end
-        love.graphics.printf(startText, startButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.rectangle("line", startButtonX, buttonY, buttonW, buttonH, 10, 10)
 
-        -- Botón Salir (lado derecho)
-        local leaveButtonX = W/2 + buttonSpacing/2
+        local startText = canStart and "START GAME" or string.format("Faltan jugadores (%d/%d)", playerCount, minPlayers)
+        love.graphics.printf(startText, startButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
+
+        -- Botón Salir
         if leaveButtonHover then
             love.graphics.setColor(0.8, 0.2, 0.2, 0.9)
         else
             love.graphics.setColor(0.6, 0.1, 0.1, 0.8)
         end
-        love.graphics.rectangle("fill", leaveButtonX, startButtonY, buttonW, buttonH, 10, 10)
-
+        love.graphics.rectangle("fill", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
         love.graphics.setColor(1, 1, 1)
-        love.graphics.rectangle("line", leaveButtonX, startButtonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("LEAVE", leaveButtonX, startButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.rectangle("line", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
+        love.graphics.printf("LEAVE", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
     else
-        -- No anfitrión o no hay suficientes jugadores: Solo mostrar botón salir centrado
+        -- No anfitrión: solo botón salir centrado
         local leaveButtonX = W/2 - buttonW/2
-        local leaveButtonY = H * 0.83
 
         if leaveButtonHover then
             love.graphics.setColor(0.8, 0.2, 0.2, 0.9)
         else
             love.graphics.setColor(0.6, 0.1, 0.1, 0.8)
         end
-        love.graphics.rectangle("fill", leaveButtonX, leaveButtonY, buttonW, buttonH, 10, 10)
-
+        love.graphics.rectangle("fill", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
         love.graphics.setColor(1, 1, 1)
-        love.graphics.rectangle("line", leaveButtonX, leaveButtonY, buttonW, buttonH, 10, 10)
-        local textHeight = UI.font("button"):getHeight()
-        love.graphics.printf("LEAVE ROOM", leaveButtonX, leaveButtonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.rectangle("line", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
+        love.graphics.printf("LEAVE ROOM", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
     end
 
     -- Indicación ESC
@@ -489,18 +495,21 @@ function Lobby.mousemoved(x, y, escena)
         local pw, ph = W * 0.7, H * 0.75
         local panelX = W/2 - pw/2
         local panelY = H/2 - ph/2
-        local contentY = panelY + ph * 0.15
+        local titleFontH = UI.font("title"):getHeight()
+        local buttonFontH = UI.font("button"):getHeight()
+        local gap = math.floor(H * 0.018)
+        local contentY = panelY + ph * 0.08
         local listPanelW = W * 0.22
         local listPanelX = panelX + pw - listPanelW - 20
-        local leftColX = panelX
-        local leftColW = listPanelX - panelX - 20
+        local leftColX = panelX + 20
+        local leftColW = listPanelX - panelX - 40
         local centerX = leftColX + leftColW / 2
 
-        local buttonW, buttonH = 160, 60
+        local buttonW, buttonH = 160, 55
         local spacing = 20
         local team1X = centerX - buttonW - spacing/2
         local team2X = centerX + spacing/2
-        local buttonY = contentY + 215
+        local buttonY = contentY + titleFontH + gap + (buttonFontH + gap) * 3
 
         teamButtonHover[1] = x >= team1X and x <= team1X + buttonW and
                              y >= buttonY and y <= buttonY + buttonH
@@ -545,18 +554,21 @@ function Lobby.mousepressed(x, y, btn, escena)
         local pw, ph = W * 0.7, H * 0.75
         local panelX = W/2 - pw/2
         local panelY = H/2 - ph/2
-        local contentY = panelY + ph * 0.15
+        local titleFontH = UI.font("title"):getHeight()
+        local buttonFontH = UI.font("button"):getHeight()
+        local gap = math.floor(H * 0.018)
+        local contentY = panelY + ph * 0.08
         local listPanelW = W * 0.22
         local listPanelX = panelX + pw - listPanelW - 20
-        local leftColX = panelX
-        local leftColW = listPanelX - panelX - 20
+        local leftColX = panelX + 20
+        local leftColW = listPanelX - panelX - 40
         local centerX = leftColX + leftColW / 2
 
-        local buttonW, buttonH = 160, 60
+        local buttonW, buttonH = 160, 55
         local spacing = 20
         local team1X = centerX - buttonW - spacing/2
         local team2X = centerX + spacing/2
-        local buttonY = contentY + 215
+        local buttonY = contentY + titleFontH + gap + (buttonFontH + gap) * 3
 
         if x >= team1X and x <= team1X + buttonW and y >= buttonY and y <= buttonY + buttonH then
             myTeam = 1

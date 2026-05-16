@@ -91,12 +91,12 @@ end
 -- Mostrar notificación de powerup recogido
 function GameMultiplayer.showPowerupNotification(powerupType, duration)
     local names = {
-        health = "HEALTH PACK",
-        ammo = "AMMO BOOST",
-        shield = "SHIELD",
-        speed = "SPEED BOOST"
+        health = "KIT MÉDICO",
+        ammo = "DISPARO RÁPIDO",
+        shield = "ESCUDO",
+        speed = "VELOCIDAD"
     }
-    powerupNotification.text = names[powerupType] or "POWERUP"
+    powerupNotification.text = names[powerupType] or "MEJORA"
     powerupNotification.active = true
     powerupNotification.timer = 0
     powerupNotification.powerupTimer = duration or 0
@@ -143,6 +143,7 @@ function GameMultiplayer.load(mapIdx)
     if not subsystemsLoaded then
         Tank.load(spawn.x, spawn.y)
         Bullet.load()
+        Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
         Powerup.load()
         Effects.load()
         Tracks.load()
@@ -567,7 +568,7 @@ function GameMultiplayer.drawHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("AMMO  %d / %d", ammo, maxAmmo)
+        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
         local tw = font:getWidth(txt)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, W/2 - tw/2, boxY - 30)

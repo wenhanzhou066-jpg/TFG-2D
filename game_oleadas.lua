@@ -3,6 +3,7 @@
 
 local GameOleadas = {}
 
+local Settings = require("systems.settings")
 local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
@@ -258,7 +259,7 @@ function GameOleadas.drawControlsOverlay()
     -- Título
     love.graphics.setFont(fontT)
     love.graphics.setColor(0.9, 0.85, 1.0, a)
-    love.graphics.printf("MODO COOPERATIVO", bx, by + 22, boxW, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "COOPERATIVE MODE" or "MODO COOPERATIVO", bx, by + 22, boxW, "center")
 
     love.graphics.setFont(fontSm)
 
@@ -271,32 +272,32 @@ function GameOleadas.drawControlsOverlay()
     local rowY  = by + 90
 
     love.graphics.setColor(0.3, 0.8, 1.0, a)
-    love.graphics.print("JUGADOR 1", col1X, rowY)
+    love.graphics.print(Settings.idioma == "EN" and "PLAYER 1" or "JUGADOR 1", col1X, rowY)
     rowY = rowY + 36
     love.graphics.setColor(0.85, 0.85, 0.85, a)
 
     local b1 = Controls.getAll(1)
-    love.graphics.print("Mover:      " .. (b1.up or "w") .. " / " .. (b1.left or "a") .. " / " .. (b1.down or "s") .. " / " .. (b1.right or "d"), col1X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Move:       " or "Mover:      ") .. (b1.up or "w") .. " / " .. (b1.left or "a") .. " / " .. (b1.down or "s") .. " / " .. (b1.right or "d"), col1X, rowY)
     rowY = rowY + 28
-    love.graphics.print("Apuntar:    Ratón", col1X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Aim:        Mouse" or "Apuntar:    Ratón"), col1X, rowY)
     rowY = rowY + 28
-    love.graphics.print("Disparar:   Click izquierdo", col1X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Shoot:      Left click" or "Disparar:   Click izquierdo"), col1X, rowY)
 
     -- Columna J2
     local col2X = bx + boxW / 2 + 20
     rowY = by + 90
 
     love.graphics.setColor(1.0, 0.65, 0.2, a)
-    love.graphics.print("JUGADOR 2", col2X, rowY)
+    love.graphics.print(Settings.idioma == "EN" and "PLAYER 2" or "JUGADOR 2", col2X, rowY)
     rowY = rowY + 36
     love.graphics.setColor(0.85, 0.85, 0.85, a)
 
     local b2 = Controls.getAll(2)
-    love.graphics.print("Mover:      " .. (b2.up or "up") .. " / " .. (b2.left or "left") .. " / " .. (b2.down or "down") .. " / " .. (b2.right or "right"), col2X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Move:       " or "Mover:      ") .. (b2.up or "up") .. " / " .. (b2.left or "left") .. " / " .. (b2.down or "down") .. " / " .. (b2.right or "right"), col2X, rowY)
     rowY = rowY + 28
-    love.graphics.print("Torreta:    " .. (b2.turretLeft or "j") .. " / " .. (b2.turretRight or "k"), col2X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Turret:     " or "Torreta:    ") .. (b2.turretLeft or "j") .. " / " .. (b2.turretRight or "k"), col2X, rowY)
     rowY = rowY + 28
-    love.graphics.print("Disparar:   " .. (b2.fire or "l"), col2X, rowY)
+    love.graphics.print((Settings.idioma == "EN" and "Shoot:      " or "Disparar:   ") .. (b2.fire or "l"), col2X, rowY)
 
     -- Separador vertical
     love.graphics.setColor(0.25, 0.55, 1.0, 0.4 * a)
@@ -309,13 +310,13 @@ function GameOleadas.drawControlsOverlay()
     love.graphics.setColor(0.4, 0.75, 1.0, a)
     love.graphics.rectangle("line", cbx, cby, cbw, cbh, 10, 10)
     love.graphics.setColor(0.9, 0.95, 1.0, a)
-    love.graphics.printf("Configurar controles", cbx, cby + (cbh - fontSm:getHeight()) / 2, cbw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Configure controls" or "Configurar controles", cbx, cby + (cbh - fontSm:getHeight()) / 2, cbw, "center")
 
     -- Pie
     love.graphics.setColor(0.55, 0.55, 0.55, a)
     local blink = math.floor(love.timer.getTime() * 2) % 2 == 0
     if blink then
-        love.graphics.printf("Pulsa cualquier tecla o haz clic para comenzar", bx, by + boxH - 50, boxW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "Press any key or click to start" or "Pulsa cualquier tecla o haz clic para comenzar", bx, by + boxH - 50, boxW, "center")
     end
 
     love.graphics.setColor(1, 1, 1)
@@ -331,7 +332,7 @@ function GameOleadas.drawHUD()
     local total     = Oleadas.getTotalOleadas()
 
     love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.print("Oleada: " .. numOleada .. "/" .. total, 20, 20)
+    love.graphics.print((Settings.idioma == "EN" and "Wave: " or "Oleada: ") .. numOleada .. "/" .. total, 20, 20)
     love.graphics.print("Bots: " .. Bot.contarVivos(), 20, 52)
 
     if modo == "coop" then
@@ -357,7 +358,7 @@ function GameOleadas.drawHUD()
         if etiqueta ~= "" then
             love.graphics.printf(etiqueta, GAME_W/2-260, GAME_H/2-38, 520, "center")
         end
-        love.graphics.printf("Siguiente oleada en " .. cd .. "s", GAME_W/2-260, GAME_H/2+10, 520, "center")
+        love.graphics.printf((Settings.idioma == "EN" and "Next wave in " or "Siguiente oleada en ") .. cd .. "s", GAME_W/2-260, GAME_H/2+10, 520, "center")
     end
 
     if estado == "victoria" then
@@ -365,7 +366,7 @@ function GameOleadas.drawHUD()
         love.graphics.setColor(0, 0, 0, 0.65)
         love.graphics.rectangle("fill", GAME_W/2-260, GAME_H/2-40, 520, 80, 8, 8)
         love.graphics.setColor(0.3, 1, 0.3)
-        love.graphics.printf("¡VICTORIA! Todas las oleadas completadas", GAME_W/2-260, GAME_H/1.96, 520, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "VICTORY! All waves completed" or "¡VICTORIA! Todas las oleadas completadas", GAME_W/2-260, GAME_H/1.96, 520, "center")
     end
 
     -- Ammo HUD (J1 only)
@@ -402,7 +403,7 @@ function GameOleadas.drawHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
+        local txt = string.format(Settings.idioma == "EN" and "AMMO  %d / %d" or "MUNICIÓN  %d / %d", ammo, maxAmmo)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, GAME_W/2 - fontA:getWidth(txt)/2, boxY - 30)
     end

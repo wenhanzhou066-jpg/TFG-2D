@@ -2,6 +2,7 @@
 -- Permite elegir modo de juego y número máximo de jugadores
 
 local Base = require("systems.menu.base")
+local Settings = require("systems.settings")
 local UI = require("systems.ui")
 
 local RoomConfig = {}
@@ -40,7 +41,7 @@ function RoomConfig.draw(escena)
 
     -- Titulo
     local yT = H * 0.04 + math.sin(tiempo * 2) * 4
-    UI.titleBanner(escena.tituloImg(), "CONFIGURAR SALA", yT, tiempo)
+    UI.titleBanner(escena.tituloImg(), Settings.idioma == "EN" and "CONFIGURE ROOM" or "CONFIGURAR SALA", yT, tiempo)
 
     -- Panel central
     love.graphics.setColor(0, 0, 0, 0.8)
@@ -55,7 +56,7 @@ function RoomConfig.draw(escena)
     -- Nombre de sala
     love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Nombre de la Sala:", 0, contentStartY, W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Room Name:" or "Nombre de la Sala:", 0, contentStartY, W, "center")
 
     -- Input box nombre
     love.graphics.setColor(0.2, 0.2, 0.2)
@@ -71,7 +72,7 @@ function RoomConfig.draw(escena)
     -- Modo de juego
     love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("Modo de Juego:", 0, contentStartY + 110, W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Game Mode:" or "Modo de Juego:", 0, contentStartY + 110, W, "center")
 
     -- Botones de modo HORIZONTALES
     local buttonW, buttonH = 280, 90
@@ -106,13 +107,13 @@ function RoomConfig.draw(escena)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(UI.font("button"))
         local textHeight = UI.font("button"):getHeight()
-        love.graphics.printf(mode.name, buttonX, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and mode.name_en or mode.name, buttonX, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
     end
 
     -- Instrucciones
     love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[←→] Cambiar modo  |  [ENTER] Crear sala  |  [ESC] Volver", 0, H * 0.90, W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "[←→] Change mode | [ENTER] Create room | [ESC] Back" or "[←→] Cambiar modo  |  [ENTER] Crear sala  |  [ESC] Volver", 0, H * 0.90, W, "center")
 end
 
 function RoomConfig.keypressed(key, escena)

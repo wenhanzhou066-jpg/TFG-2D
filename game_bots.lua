@@ -3,6 +3,7 @@
 
 local GameBots = {}
 
+local Settings = require("systems.settings")
 local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
@@ -156,7 +157,7 @@ function GameBots.drawHUD()
     local nombreDif = dificultades[nivelDif] or "Normal"
 
     love.graphics.setColor(1, 1, 1, 0.9)
-    love.graphics.print("Dificultad: " .. nombreDif, 20, 20)
+    love.graphics.print((Settings.idioma == "EN" and "Difficulty: " or "Dificultad: ") .. nombreDif, 20, 20)
     love.graphics.print("Bots: " .. Bot.contarVivos(), 20, 52) -- y incrementado para mejor espaciado
 
     if Bot.contarVivos() == 0 then
@@ -164,7 +165,7 @@ function GameBots.drawHUD()
         love.graphics.setColor(0, 0, 0, 0.65)
         love.graphics.rectangle("fill", GAME_W/2-260, GAME_H/2-40, 520, 80, 8, 8)
         love.graphics.setColor(0.3, 1, 0.3)
-        love.graphics.printf("¡Todos los bots eliminados!", GAME_W/2-260, GAME_H/2-14, 520, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "All bots eliminated!" or "¡Todos los bots eliminados!", GAME_W/2-260, GAME_H/2-14, 520, "center")
     end
 
     -- Ammo HUD
@@ -201,7 +202,7 @@ function GameBots.drawHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
+        local txt = string.format(Settings.idioma == "EN" and "AMMO  %d / %d" or "MUNICIÓN  %d / %d", ammo, maxAmmo)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, GAME_W/2 - fontA:getWidth(txt)/2, boxY - 30)
     end

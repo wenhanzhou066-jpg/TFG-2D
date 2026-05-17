@@ -17,6 +17,7 @@ local T = {
         creditos     = "CREDITOS",
         menu_oleadas = "OLEADAS",
         practicar    = "PRACTICAR CON BOTS",
+        dificultad   = "DIFICULTAD",
     },
     EN = {
         principal    = "MAIN MENU",
@@ -29,6 +30,7 @@ local T = {
         creditos     = "CREDITS",
         menu_oleadas = "WAVES",
         practicar    = "PRACTICE WITH BOTS",
+        dificultad   = "DIFFICULTY",
     },
 }
 

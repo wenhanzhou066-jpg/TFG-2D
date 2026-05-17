@@ -2,6 +2,7 @@
 -- Muestra estado de conexion y espera a que 2 jugadores se conecten
 
 local Base = require("systems.menu.base")
+local Settings = require("systems.settings")
 local Red = require("network")
 local UI = require("systems.ui")
 
@@ -60,11 +61,11 @@ function Lobby.load(escena, lobbyMode, params)
         local success = Red.init("217.78.237.7", 12345)
         if success then
             Red.conectar(params.room_name, params.metadata)
-            addMessage("Creando sala '" .. params.room_name .. "'...")
-            addMessage("Modo: " .. gameMode)
+            addMessage((Settings.idioma == "EN" and "Creating room '" or "Creando sala '") .. params.room_name .. "'...")
+            addMessage((Settings.idioma == "EN" and "Mode: " or "Modo: ") .. gameMode)
             -- estado permanece "connecting" hasta recibir bienvenida del servidor
         else
-            addMessage("ERROR: No se pudo inicializar red")
+            addMessage(Settings.idioma == "EN" and "ERROR: Could not initialize network" or "ERROR: No se pudo inicializar red")
             estado = "error"
         end
 
@@ -76,14 +77,14 @@ function Lobby.load(escena, lobbyMode, params)
         local success = Red.init("217.78.237.7", 12345)
         if success then
             Red.conectar(params.room_name)
-            addMessage("Uniéndose a sala '" .. params.room_name .. "'...")
+            addMessage((Settings.idioma == "EN" and "Joining room '" or "Uniéndose a sala '") .. params.room_name .. "'...")
             -- estado permanece "connecting" hasta recibir bienvenida del servidor
         else
-            addMessage("ERROR: No se pudo inicializar red")
+            addMessage(Settings.idioma == "EN" and "ERROR: Could not initialize network" or "ERROR: No se pudo inicializar red")
             estado = "error"
         end
     else
-        addMessage("ERROR: Parámetros inválidos")
+        addMessage(Settings.idioma == "EN" and "ERROR: Invalid parameters" or "ERROR: Parámetros inválidos")
         estado = "error"
     end
 end
@@ -91,16 +92,16 @@ end
 function Lobby.connectToRoom(room_id)
     estado = "connecting"
     myRoomId = room_id
-    addMessage("Conectando a sala: " .. room_id)
+    addMessage((Settings.idioma == "EN" and "Connecting to room: " or "Conectando a sala: ") .. room_id)
 
     local success = Red.init("217.78.237.7", 12345)
 
     if success then
         Red.conectar(room_id)
-        addMessage("Conexión iniciada")
+        addMessage(Settings.idioma == "EN" and "Connection started" or "Conexión iniciada")
         estado = "waiting"
     else
-        addMessage("ERROR: No se pudo inicializar red")
+        addMessage(Settings.idioma == "EN" and "ERROR: Could not initialize network" or "ERROR: No se pudo inicializar red")
         estado = "error"
     end
 end
@@ -114,9 +115,9 @@ function Lobby.update(dt, escena)
         if estado == "connecting" then
             connectionTimeout = connectionTimeout + dt
             if connectionTimeout > CONNECTION_TIMEOUT_SECONDS then
-                addMessage("ERROR: Tiempo de conexión agotado")
-                addMessage("El servidor no responde en 217.78.237.7:12345")
-                addMessage("Verifica que el servidor esté corriendo")
+                addMessage(Settings.idioma == "EN" and "ERROR: Connection timeout" or "ERROR: Tiempo de conexión agotado")
+                addMessage((Settings.idioma == "EN" and "Server not responding at " or "El servidor no responde en ") .. "217.78.237.7:12345")
+                addMessage(Settings.idioma == "EN" and "Check that the server is running" or "Verifica que el servidor esté corriendo")
                 Red.desconectar()
                 estado = "error"
             end
@@ -128,8 +129,8 @@ function Lobby.update(dt, escena)
             myRoomId = Red.id_sala or "default"
             estado = "waiting"
             Red.in_game = true  -- trigger position sends so server broadcasts state to all clients
-            addMessage("¡Conectado exitosamente!")
-            addMessage("Tu ID de jugador: " .. myPlayerId)
+            addMessage(Settings.idioma == "EN" and "Connected successfully!" or "¡Conectado exitosamente!")
+            addMessage((Settings.idioma == "EN" and "Your player ID: " or "Tu ID de jugador: ") .. myPlayerId)
         end
 
         -- Contar jugadores
@@ -167,7 +168,7 @@ function Lobby.draw(escena)
 
     -- Titulo
     local yT = H * 0.04 + math.sin(tiempo * 2) * 4
-    UI.titleBanner(escena.tituloImg(), "SALA MULTIJUGADOR", yT, tiempo)
+    UI.titleBanner(escena.tituloImg(), Settings.idioma == "EN" and "MULTIPLAYER ROOM" or "SALA MULTIJUGADOR", yT, tiempo)
 
     -- Panel central
     love.graphics.setColor(0, 0, 0, 0.8)
@@ -215,16 +216,16 @@ function Lobby.draw(escena)
     local statusColor = {1, 1, 1}
 
     if estado == "connecting" then
-        statusText = "CONECTANDO..."
+        statusText = Settings.idioma == "EN" and "CONNECTING..." or "CONECTANDO..."
         statusColor = {1, 1, 0}
     elseif estado == "waiting" then
-        statusText = "ESPERANDO JUGADORES..."
+        statusText = Settings.idioma == "EN" and "WAITING FOR PLAYERS..." or "ESPERANDO JUGADORES..."
         statusColor = {0.5, 0.5, 1}
     elseif estado == "ready" then
-        statusText = string.format("¡COMENZANDO EN %d!", math.ceil(countdown))
+        statusText = string.format(Settings.idioma == "EN" and "STARTING IN %d!" or "¡COMENZANDO EN %d!", math.ceil(countdown))
         statusColor = {0, 1, 0}
     elseif estado == "error" then
-        statusText = "ERROR DE CONEXIÓN"
+        statusText = Settings.idioma == "EN" and "CONNECTION ERROR" or "ERROR DE CONEXIÓN"
         statusColor = {1, 0, 0}
     end
 
@@ -261,18 +262,18 @@ function Lobby.draw(escena)
     end
 
     -- Modo de juego
-    local modeNames = { ["1v1"] = "1 vs 1", ["ffa"] = "Todos vs Todos", ["2v2"] = "2v2" }
+    local modeNames = { ["1v1"] = "1 vs 1", ["ffa"] = Settings.idioma == "EN" and "Free for All" or "Todos vs Todos", ["2v2"] = "2v2" }
     if gameMode then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(0.7, 0.9, 1)
-        love.graphics.printf("Modo: " .. (modeNames[gameMode] or gameMode), leftColX, modoY, leftColW, "center")
+        love.graphics.printf((Settings.idioma == "EN" and "Mode: " or "Modo: ") .. (modeNames[gameMode] or gameMode), leftColX, modoY, leftColW, "center")
     end
 
     -- Selección de equipo para 2v2
     if gameMode == "2v2" and myPlayerId then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Selecciona tu equipo:", leftColX, selectTeamY, leftColW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "Select your team:" or "Selecciona tu equipo:", leftColX, selectTeamY, leftColW, "center")
 
         local buttonW, buttonH = 160, 55
         local spacing = 20
@@ -301,7 +302,7 @@ function Lobby.draw(escena)
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(UI.font("button"))
         local textHeight = UI.font("button"):getHeight()
-        love.graphics.printf("EQUIPO 1", team1X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "TEAM 1" or "EQUIPO 1", team1X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
 
         -- Botón Equipo 2
         if teamButtonHover[2] or myTeam == 2 then
@@ -322,7 +323,7 @@ function Lobby.draw(escena)
 
         love.graphics.setColor(1, 1, 1)
         love.graphics.setFont(UI.font("button"))
-        love.graphics.printf("EQUIPO 2", team2X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "TEAM 2" or "EQUIPO 2", team2X, buttonY + (buttonH - textHeight) / 2, buttonW, "center")
     end
 
     -- Contador de jugadores
@@ -330,7 +331,7 @@ function Lobby.draw(escena)
     love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
     local maxPlayers = (gameMode == "1v1" and 2) or (gameMode == "2v2" and 4) or 8
-    local playerText = string.format("Jugadores: %d / %d", playerCount, maxPlayers)
+    local playerText = string.format(Settings.idioma == "EN" and "Players: %d / %d" or "Jugadores: %d / %d", playerCount, maxPlayers)
     love.graphics.printf(playerText, leftColX, infoStartY, leftColW, "center")
 
     love.graphics.setColor(0.1, 0.1, 0.1, 0.9)
@@ -343,7 +344,7 @@ function Lobby.draw(escena)
     -- Título
     love.graphics.setFont(UI.font("button"))
     love.graphics.setColor(1, 1, 1)
-    love.graphics.printf("JUGADORES", listPanelX, listPanelY + 15, listPanelW, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "PLAYERS" or "JUGADORES", listPanelX, listPanelY + 15, listPanelW, "center")
 
     -- Línea separadora
     love.graphics.setColor(0.5, 0.5, 0.5)
@@ -364,7 +365,7 @@ function Lobby.draw(escena)
         love.graphics.print("ID: " .. myPlayerId, listPanelX + 20, playerListY)
         love.graphics.setFont(UI.font("small"))
         love.graphics.setColor(0.7, 0.7, 0.7)
-        love.graphics.print("(Tú)", listPanelX + 20, playerListY + 16)
+        love.graphics.print(Settings.idioma == "EN" and "(You)" or "(Tú)", listPanelX + 20, playerListY + 16)
 
         playerListY = playerListY + lineHeight
     end
@@ -426,7 +427,7 @@ function Lobby.draw(escena)
         love.graphics.setLineWidth(2)
         love.graphics.rectangle("line", startButtonX, buttonY, buttonW, buttonH, 10, 10)
 
-        local startText = canStart and "START GAME" or string.format("Faltan jugadores (%d/%d)", playerCount, minPlayers)
+        local startText = canStart and "START GAME" or string.format(Settings.idioma == "EN" and "Waiting for players (%d/%d)" or "Faltan jugadores (%d/%d)", playerCount, minPlayers)
         love.graphics.printf(startText, startButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
 
         -- Botón Salir
@@ -438,7 +439,7 @@ function Lobby.draw(escena)
         love.graphics.rectangle("fill", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("LEAVE", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "LEAVE" or "SALIR", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
     else
         -- No anfitrión: solo botón salir centrado
         local leaveButtonX = W/2 - buttonW/2
@@ -451,13 +452,13 @@ function Lobby.draw(escena)
         love.graphics.rectangle("fill", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
         love.graphics.setColor(1, 1, 1)
         love.graphics.rectangle("line", leaveButtonX, buttonY, buttonW, buttonH, 10, 10)
-        love.graphics.printf("LEAVE ROOM", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "LEAVE ROOM" or "SALIR DE SALA", leaveButtonX, buttonY + (buttonH - textHeight)/2, buttonW, "center")
     end
 
     -- Indicación ESC
     love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[ESC] Back to menu", 0, H * 0.93, W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "[ESC] Back to menu" or "[ESC] Volver al menú", 0, H * 0.93, W, "center")
 end
 
 function Lobby.keypressed(key, escena)

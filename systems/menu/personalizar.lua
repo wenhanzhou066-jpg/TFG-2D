@@ -20,7 +20,10 @@ local cursorTimer = 0
 -- ── Modo perfil ───────────────────────────────────────────────────────────
 local WEAPON_NAMES = { "Viper", "Thunder", "Railgun", "Inferno", "Cyclone", "Nova", "Hellfire", "Oblivion" }
 
-local seccionesPerfil = { "CUERPO", "TORRETA", "MUNICION", "ARMA" }
+local seccionesPerfil = {
+    ES = { "CUERPO", "TORRETA", "MUNICION", "ARMA" },
+    EN = { "BODY", "TURRET", "AMMO", "WEAPON" }
+}
 local perfilSeccion   = 1
 local weaponIdx       = 1
 local colorBodyR, colorBodyG, colorBodyB = 1.0, 0.7, 0.2
@@ -184,13 +187,13 @@ local function resetForm(m)
     if m == "nuevo" then
         campos = {
             { id = "gamertag", label = "GAMERTAG",  text = "", secret = false },
-            { id = "password", label = "CONTRASENA", text = "", secret = true  },
-            { id = "confirm",  label = "CONFIRMAR",  text = "", secret = true  },
+            { id = "password", label = Settings.idioma == "EN" and "PASSWORD" or "CONTRASENA", text = "", secret = true  },
+            { id = "confirm",  label = Settings.idioma == "EN" and "CONFIRM" or "CONFIRMAR",  text = "", secret = true  },
         }
     elseif m == "cargar" then
         campos = {
             { id = "gamertag", label = "GAMERTAG",  text = "", secret = false },
-            { id = "password", label = "CONTRASENA", text = "", secret = true  },
+            { id = "password", label = Settings.idioma == "EN" and "PASSWORD" or "CONTRASENA", text = "", secret = true  },
         }
     end
 end
@@ -201,16 +204,16 @@ local function ejecutarForm(escena)
         local pw   = campos[2].text
         local conf = campos[3].text
         if pw ~= conf then
-            setMsg("Las contrasenas no coinciden")
+            setMsg(Settings.idioma == "EN" and "Passwords do not match" or "Las contrasenas no coinciden")
             return
         end
         local ok, err = Perfil.registrar(gt, pw)
         if ok then
             Perfil.activo = Perfil.autenticar(gt, pw)
-            setMsg("Perfil creado: " .. gt, true)
+            setMsg((Settings.idioma == "EN" and "Profile created: " or "Perfil creado: ") .. gt, true)
             modo = "inicio"
         else
-            setMsg(err or "Error al crear perfil")
+            setMsg(err or (Settings.idioma == "EN" and "Error creating profile" or "Error al crear perfil"))
         end
 
     elseif modo == "cargar" then
@@ -222,10 +225,10 @@ local function ejecutarForm(escena)
             colorR = perfil.colorR
             colorG = perfil.colorG
             colorB = perfil.colorB
-            setMsg("Bienvenido, " .. gt, true)
+            setMsg((Settings.idioma == "EN" and "Welcome, " or "Bienvenido, ") .. gt, true)
             modo = "inicio"
         else
-            setMsg(err or "Credenciales incorrectas")
+            setMsg(err or (Settings.idioma == "EN" and "Invalid credentials" or "Credenciales incorrectas"))
         end
     end
 end
@@ -278,7 +281,7 @@ function Personalizar.draw(escena)
             local f = UI.font("small")
             love.graphics.setFont(f)
             love.graphics.setColor(UI.colors.goldDark)
-            local txt = "SESION: " .. Perfil.activo.gamertag
+            local txt = (Settings.idioma == "EN" and "SESSION: " or "SESION: ") .. Perfil.activo.gamertag
             love.graphics.print(txt, W / 2 - f:getWidth(txt) / 2, H * 0.87)
             love.graphics.setColor(1, 1, 1)
         end
@@ -297,12 +300,12 @@ function Personalizar.draw(escena)
         local gap  = W * 0.04
         local x1   = W / 2 - btnW - gap / 2
         local x2   = W / 2 + gap / 2
-        local acLabel = modo == "nuevo" and "CREAR" or "ENTRAR"
+        local acLabel = modo == "nuevo" and (Settings.idioma == "EN" and "CREATE" or "CREAR") or (Settings.idioma == "EN" and "LOGIN" or "ENTRAR")
 
         UI.button(escena.botonImg(),     x1, yBtn, btnW, btnH,
                   acLabel,    false, tiempo, false, nil)
         UI.button(escena.botonExitImg(), x2, yBtn, btnW, btnH,
-                  "CANCELAR", false, tiempo, true,  escena.botonExitImg())
+                  Settings.idioma == "EN" and "CANCEL" or "CANCELAR", false, tiempo, true,  escena.botonExitImg())
 
     -- ── Modo perfil ───────────────────────────────────────────────────────
     elseif modo == "perfil" then
@@ -314,7 +317,7 @@ function Personalizar.draw(escena)
             local sel = perfilSeccion == (i + 1)
             UI.button(
                 escena.botonImg(), secX, ry, secW, rbh,
-                seccionesPerfil[i + 1], sel, tiempo, false, escena.botonExitImg()
+                seccionesPerfil[Settings.idioma][i + 1], sel, tiempo, false, escena.botonExitImg()
             )
             if sel then UI.drawSelector(secX, ry, rbh, tiempo) end
         end
@@ -346,7 +349,7 @@ function Personalizar.draw(escena)
                 { previewAmmoR,   previewAmmoG,   previewAmmoB   },
             }
             local fsmall = UI.font("small")
-            local previewLabels = { "CUERPO", "TORRETA", "MUNICION" }
+            local previewLabels = Settings.idioma == "EN" and { "BODY", "TURRET", "AMMO" } or { "CUERPO", "TORRETA", "MUNICION" }
             for i = 0, 2 do
                 local _, ry, _, rbh = geomColorRow(i, W, H)
                 local c = previewColors[i + 1]
@@ -411,9 +414,9 @@ function Personalizar.draw(escena)
         local startX  = W / 2 - totalW / 2
 
         local btnDefs = {
-            { label = "VOLVER",        exit = true,  opcion = 6, w = bwSmall },
-            { label = "GUARDAR",       exit = false, opcion = 4, w = bwSmall },
-            { label = "CERRAR SESION", exit = true,  opcion = 5, w = bwLarge },
+            { label = Settings.idioma == "EN" and "BACK" or "VOLVER",        exit = true,  opcion = 6, w = bwSmall },
+            { label = Settings.idioma == "EN" and "SAVE" or "GUARDAR",       exit = false, opcion = 4, w = bwSmall },
+            { label = Settings.idioma == "EN" and "LOGOUT" or "CERRAR SESION", exit = true,  opcion = 5, w = bwLarge },
         }
         local gaps = { gap, bigGap }   -- gap después del btn 1, gap después del btn 2
         local bx = startX
@@ -592,7 +595,7 @@ function Personalizar.keypressed(key, escena)
                         weaponIdx    = weaponIdx,
                     })
                 end
-                setMsg("Personalizacion guardada", true)
+                setMsg(Settings.idioma == "EN" and "Customization saved" or "Personalizacion guardada", true)
             elseif opcionPerfil == 5 then       -- Cerrar sesion
                 Perfil.activo = nil
                 Audio.volverMenu(); modo = "inicio"
@@ -793,7 +796,7 @@ function Personalizar.mousepressed(mx, my, btn, escena)
                                 colorAmmoB   = colorAmmoB,
                             })
                         end
-                        setMsg("Personalizacion guardada", true)
+                        setMsg(Settings.idioma == "EN" and "Customization saved" or "Personalizacion guardada", true)
                     elseif def.opcion == 5 then -- Cerrar sesion
                         Perfil.activo = nil
                         Audio.volverMenu(); modo = "inicio"

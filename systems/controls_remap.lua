@@ -1,6 +1,7 @@
 -- Panel de remapeo de teclas para ambos jugadores locales.
 
 local Controls = require("systems.controls")
+local Settings = require("systems.settings")
 
 local Remap = {}
 
@@ -40,7 +41,7 @@ local function findDuplicates(newKey, exceptPid, exceptAction)
         for _, action in ipairs(order) do
             if not (pid == exceptPid and action == exceptAction) then
                 if binds[action] == newKey then
-                    local label = Controls.actionLabels[action] or action
+                    local label = Controls.getLabel(action)
                     return pid, label
                 end
             end
@@ -90,8 +91,8 @@ function Remap.keypressed(key)
         -- Comprobar duplicado
         local dupPid, dupLabel = findDuplicates(key, waitingFor.pid, waitingFor.action)
         if dupPid then
-            local who = dupPid == waitingFor.pid and "este jugador" or ("Jugador " .. dupPid)
-            errorMsg   = "\"" .. key .. "\" ya está asignada a [" .. dupLabel .. "] de " .. who
+            local who = dupPid == waitingFor.pid and (Settings.idioma == "EN" and "this player" or "este jugador") or ((Settings.idioma == "EN" and "Player " or "Jugador ") .. dupPid)
+            errorMsg   = "\"" .. key .. "\"" .. (Settings.idioma == "EN" and " is already assigned to " or " ya está asignada a ") .. "[" .. dupLabel .. "] " .. (Settings.idioma == "EN" and "of " or "de ") .. who
             errorTimer = 2.5
             waitingFor = nil
             return true
@@ -176,13 +177,13 @@ function Remap.draw()
     -- Título
     love.graphics.setFont(fontBtn)
     love.graphics.setColor(0.9, 0.85, 1.0)
-    love.graphics.printf("CONFIGURAR CONTROLES", BX, BY + 18, BOX_W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "CONFIGURE CONTROLS" or "CONFIGURAR CONTROLES", BX, BY + 18, BOX_W, "center")
 
     love.graphics.setFont(fontSm)
 
     -- Subtítulo de ayuda
     love.graphics.setColor(0.50, 0.50, 0.50)
-    love.graphics.printf("Haz clic en una acción y pulsa la nueva tecla · Escape para cancelar", BX, BY + 62, BOX_W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Click an action and press the new key · Escape to cancel" or "Haz clic en una acción y pulsa la nueva tecla · Escape para cancelar", BX, BY + 62, BOX_W, "center")
 
     -- Separador horizontal
     love.graphics.setColor(0.25, 0.55, 1.0, 0.4)
@@ -195,13 +196,13 @@ function Remap.draw()
     love.graphics.setColor(0.10, 0.22, 0.40, 0.85)
     love.graphics.rectangle("fill", COL1_X, hdrY, COL_W - 20, 34, 6, 6)
     love.graphics.setColor(0.3, 0.8, 1.0)
-    love.graphics.printf("JUGADOR 1", COL1_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "PLAYER 1" or "JUGADOR 1", COL1_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
 
     -- Fondo cabecera J2
     love.graphics.setColor(0.35, 0.18, 0.05, 0.85)
     love.graphics.rectangle("fill", COL2_X, hdrY, COL_W - 20, 34, 6, 6)
     love.graphics.setColor(1.0, 0.65, 0.2)
-    love.graphics.printf("JUGADOR 2", COL2_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "PLAYER 2" or "JUGADOR 2", COL2_X, hdrY + (34 - lineH) / 2, COL_W - 20, "center")
 
     -- Separador vertical entre columnas
     love.graphics.setColor(0.25, 0.55, 1.0, 0.25)
@@ -235,7 +236,7 @@ function Remap.draw()
             end
 
             -- Label de la acción (izquierda)
-            local label = Controls.actionLabels[action] or action
+            local label = Controls.getLabel(action)
             love.graphics.setColor(0.80, 0.80, 0.80)
             love.graphics.print(label, fx + 10, fy + (fh - lineH) / 2)
 
@@ -247,7 +248,7 @@ function Remap.draw()
 
             if isWaiting then
                 love.graphics.setColor(1.0, 0.85, 0.3)
-                love.graphics.printf("[ presiona tecla ]", keyBoxX, fy + (fh - lineH) / 2, keyBoxW, "center")
+                love.graphics.printf(Settings.idioma == "EN" and "[ press key ]" or "[ presiona tecla ]", keyBoxX, fy + (fh - lineH) / 2, keyBoxW, "center")
             else
                 local currentKey = binds[action] or "?"
                 love.graphics.setColor(0.15, 0.18, 0.30, 0.95)
@@ -282,7 +283,7 @@ function Remap.draw()
     love.graphics.setColor(0.55, 0.55, 0.80)
     love.graphics.rectangle("line", rx, ry, rw, rh, 8, 8)
     love.graphics.setColor(0.80, 0.80, 1.0)
-    love.graphics.printf("Restablecer", rx, ry + (rh - lineH) / 2, rw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Reset" or "Restablecer", rx, ry + (rh - lineH) / 2, rw, "center")
 
     local ax, ay, aw, ah = acceptBtnRect()
     love.graphics.setColor(0.12, 0.42, 0.15, 0.90)
@@ -290,7 +291,7 @@ function Remap.draw()
     love.graphics.setColor(0.35, 0.75, 0.40)
     love.graphics.rectangle("line", ax, ay, aw, ah, 8, 8)
     love.graphics.setColor(0.75, 1.0, 0.78)
-    love.graphics.printf("Aceptar", ax, ay + (ah - lineH) / 2, aw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Accept" or "Aceptar", ax, ay + (ah - lineH) / 2, aw, "center")
 
     love.graphics.setColor(1, 1, 1)
 end

@@ -2,6 +2,7 @@
 -- Pantalla de ranking con datos reales del servidor.
 
 local Base        = require("systems.menu.base")
+local Settings    = require("systems.settings")
 local UI          = require("systems.ui")
 local Audio       = require("systems.audio")
 local leaderboard = require("systems.leaderboard")
@@ -39,7 +40,7 @@ local function cargarDatos()
     if raw then
         datos = parseRanking(raw)
     else
-        error_msg = "No se pudo conectar al servidor"
+        error_msg = Settings.idioma == "EN" and "Could not connect to server" or "No se pudo conectar al servidor"
     end
     cargando = false
 end
@@ -73,8 +74,8 @@ function Ranking.draw(escena)
         { label = "GAMERTAG",  w = 0.30 },
         { label = "KILLS",     w = 0.14 },
         { label = "K/D",       w = 0.14 },
-        { label = "VICTORIAS", w = 0.18 },
-        { label = "PUNTOS",    w = 0.18 },
+        { label = Settings.idioma == "EN" and "WINS" or "VICTORIAS", w = 0.18 },
+        { label = Settings.idioma == "EN" and "POINTS" or "PUNTOS",    w = 0.18 },
     }
 
     local font = UI.font and UI.font("small") or love.graphics.getFont()
@@ -94,7 +95,7 @@ function Ranking.draw(escena)
     -- Contenido
     if cargando then
         love.graphics.setColor(1, 1, 1, 0.8)
-        love.graphics.printf("Cargando...", tableX, tableY + rowH * 1.5, tableW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "Loading..." or "Cargando...", tableX, tableY + rowH * 1.5, tableW, "center")
 
     elseif error_msg then
         love.graphics.setColor(1, 0.3, 0.3)
@@ -102,7 +103,7 @@ function Ranking.draw(escena)
 
     elseif #datos == 0 then
         love.graphics.setColor(1, 1, 1, 0.6)
-        love.graphics.printf("Sin datos todavia. Juega una partida!", tableX, tableY + rowH * 1.5, tableW, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "No data yet. Play a game!" or "Sin datos todavia. Juega una partida!", tableX, tableY + rowH * 1.5, tableW, "center")
 
     else
         local miGamertag = Perfil.activo and Perfil.activo.gamertag:lower() or ""
@@ -176,7 +177,7 @@ function Ranking.draw(escena)
     local bh = H * 0.07
     local bx = W / 2 - bw / 2
     local by = H * 0.88
-    UI.button(escena.botonExitImg(), bx, by, bw, bh, "Volver", true, tiempo, true, escena.botonExitImg())
+    UI.button(escena.botonExitImg(), bx, by, bw, bh, Settings.idioma == "EN" and "Back" or "Volver", true, tiempo, true, escena.botonExitImg())
 
     UI.footer()
     love.graphics.setColor(1, 1, 1)

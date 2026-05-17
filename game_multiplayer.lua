@@ -3,6 +3,7 @@
 
 local GameMultiplayer = {}
 
+local Settings = require("systems.settings")
 local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
@@ -90,13 +91,18 @@ end
 
 -- Mostrar notificación de powerup recogido
 function GameMultiplayer.showPowerupNotification(powerupType, duration)
-    local names = {
+    local names = Settings.idioma == "EN" and {
+        health = "MEDKIT",
+        ammo = "RAPID FIRE",
+        shield = "SHIELD",
+        speed = "SPEED"
+    } or {
         health = "KIT MÉDICO",
         ammo = "DISPARO RÁPIDO",
         shield = "ESCUDO",
         speed = "VELOCIDAD"
     }
-    powerupNotification.text = names[powerupType] or "MEJORA"
+    powerupNotification.text = names[powerupType] or (Settings.idioma == "EN" and "UPGRADE" or "MEJORA")
     powerupNotification.active = true
     powerupNotification.timer = 0
     powerupNotification.powerupTimer = duration or 0
@@ -363,20 +369,20 @@ function GameMultiplayer.drawEliminacionOverlay()
     local titleFont = UI.font("title") or UI.font("button") or love.graphics.getFont()
     love.graphics.setFont(titleFont)
     love.graphics.setColor(0.9, 0.15, 0.15, 1)
-    love.graphics.printf("ELIMINADO", px, py + 30, pw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "ELIMINATED" or "ELIMINADO", px, py + 30, pw, "center")
 
     -- Subtítulo
     local bodyFont = UI.font("button") or love.graphics.getFont()
     love.graphics.setFont(bodyFont)
     love.graphics.setColor(0.85, 0.85, 0.85, 1)
-    love.graphics.printf("Has muerto " .. MAX_MUERTES .. " veces", px, py + 95, pw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "You died " .. MAX_MUERTES .. " times" or "Has muerto " .. MAX_MUERTES .. " veces", px, py + 95, pw, "center")
 
     -- Stats
     local smallFont = UI.font("small") or love.graphics.getFont()
     love.graphics.setFont(smallFont)
     love.graphics.setColor(0.7, 0.7, 0.7, 1)
     love.graphics.printf(
-        string.format("Bajas: %d   |   Muertes: %d", stats.kills, stats.muertes),
+        string.format(Settings.idioma == "EN" and "Kills: %d   |   Deaths: %d" or "Bajas: %d   |   Muertes: %d", stats.kills, stats.muertes),
         px, py + 145, pw, "center")
 
     -- Botón volver al menú
@@ -389,7 +395,7 @@ function GameMultiplayer.drawEliminacionOverlay()
     love.graphics.rectangle("fill", bx, by, bw, bh, 8, 8)
     love.graphics.setColor(1, 1, 1, 1)
     love.graphics.setFont(bodyFont)
-    love.graphics.printf("Volver al menú", bx, by + 13, bw, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "Back to menu" or "Volver al menú", bx, by + 13, bw, "center")
 
     love.graphics.setColor(1, 1, 1)
 end
@@ -498,7 +504,7 @@ function GameMultiplayer.drawHUD()
     end
 
     -- Stats K/D
-    love.graphics.print(string.format("Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 10)
+    love.graphics.print(string.format(Settings.idioma == "EN" and "Kills: %d | Deaths: %d" or "Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 10)
 
     -- Notificación de powerup (centrada arriba)
     if powerupNotification.active then
@@ -568,7 +574,7 @@ function GameMultiplayer.drawHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
+        local txt = string.format(Settings.idioma == "EN" and "AMMO  %d / %d" or "MUNICIÓN  %d / %d", ammo, maxAmmo)
         local tw = font:getWidth(txt)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, W/2 - tw/2, boxY - 30)

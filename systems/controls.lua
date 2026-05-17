@@ -1,5 +1,7 @@
 -- Mapeo de teclas configurable para cada jugador local.
 
+local Settings = require("systems.settings")
+
 local Controls = {}
 
 -- Acciones disponibles y valores por defecto
@@ -24,15 +26,31 @@ local defaults = {
 local bindings = {}
 
 -- Nombres legibles para las acciones en la UI
-Controls.actionLabels = {
-    up = "Avanzar",
-    down = "Retroceder",
-    left = "Girar izq.",
-    right = "Girar der.",
-    turretLeft  = "Torreta izq.",
-    turretRight = "Torreta der.",
-    fire = "Disparar",
+local actionLabels = {
+    ES = {
+        up = "Avanzar",
+        down = "Retroceder",
+        left = "Girar izq.",
+        right = "Girar der.",
+        turretLeft  = "Torreta izq.",
+        turretRight = "Torreta der.",
+        fire = "Disparar",
+    },
+    EN = {
+        up = "Forward",
+        down = "Backward",
+        left = "Turn left",
+        right = "Turn right",
+        turretLeft  = "Turret left",
+        turretRight = "Turret right",
+        fire = "Fire",
+    }
 }
+
+function Controls.getLabel(action)
+    local t = actionLabels[Settings.idioma] or actionLabels.ES
+    return t[action] or action
+end
 
 -- Orden de acciones por jugador
 Controls.actionOrder = {

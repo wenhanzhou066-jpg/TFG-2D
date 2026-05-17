@@ -5,6 +5,7 @@
 
 local Game = {}
 
+local Settings = require("systems.settings")
 local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
@@ -175,7 +176,7 @@ function Game.drawAmmoHUD()
                 love.graphics.rectangle("line", x, boxY, boxW, boxH, 3)
             end
         end
-        local txt = string.format("MUNICIÓN  %d / %d", ammo, maxAmmo)
+        local txt = string.format(Settings.idioma == "EN" and "AMMO  %d / %d" or "MUNICIÓN  %d / %d", ammo, maxAmmo)
         love.graphics.setColor(1, 1, 1, 1)
         love.graphics.print(txt, W/2 - font:getWidth(txt)/2, boxY - 30)
     end

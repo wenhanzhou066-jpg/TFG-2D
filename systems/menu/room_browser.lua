@@ -2,6 +2,7 @@
 -- Muestra lista de salas con filtro de búsqueda
 
 local Base = require("systems.menu.base")
+local Settings = require("systems.settings")
 local UI = require("systems.ui")
 local Red = require("network")
 
@@ -18,9 +19,9 @@ local gameModeNames = {
 }
 
 local statusNames = {
-    waiting = { text = "Esperando", color = {0, 1, 0} },
-    playing = { text = "En juego", color = {1, 1, 0} },
-    full = { text = "Llena", color = {1, 0, 0} }
+    waiting = { text_es = "Esperando", text_en = "Waiting", color = {0, 1, 0} },
+    playing = { text_es = "En juego", text_en = "Playing", color = {1, 1, 0} },
+    full = { text_es = "Llena", text_en = "Full", color = {1, 0, 0} }
 }
 
 function RoomBrowser.load(escena)
@@ -77,7 +78,7 @@ function RoomBrowser.draw(escena)
 
     -- Titulo
     local yT = H * 0.04 + math.sin(tiempo * 2) * 4
-    UI.titleBanner(escena.tituloImg(), "SALAS DISPONIBLES", yT, tiempo)
+    UI.titleBanner(escena.tituloImg(), Settings.idioma == "EN" and "AVAILABLE ROOMS" or "SALAS DISPONIBLES", yT, tiempo)
 
     -- Panel superior - Búsqueda
     love.graphics.setColor(0, 0, 0, 0.9)
@@ -85,7 +86,7 @@ function RoomBrowser.draw(escena)
 
     love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.print("Buscar:", W * 0.12, H * 0.17)
+    love.graphics.print(Settings.idioma == "EN" and "Search:" or "Buscar:", W * 0.12, H * 0.17)
 
     -- Input box búsqueda
     love.graphics.setColor(0.2, 0.2, 0.2)
@@ -109,10 +110,10 @@ function RoomBrowser.draw(escena)
     -- Encabezados
     love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.9, 0.9, 0.9)
-    love.graphics.print("SALA", W * 0.13, H * 0.27)
-    love.graphics.print("MODO", W * 0.42, H * 0.27)
-    love.graphics.print("JUGADORES", W * 0.60, H * 0.27)
-    love.graphics.print("ESTADO", W * 0.76, H * 0.27)
+    love.graphics.print(Settings.idioma == "EN" and "ROOM" or "SALA", W * 0.13, H * 0.27)
+    love.graphics.print(Settings.idioma == "EN" and "MODE" or "MODO", W * 0.42, H * 0.27)
+    love.graphics.print(Settings.idioma == "EN" and "PLAYERS" or "JUGADORES", W * 0.60, H * 0.27)
+    love.graphics.print(Settings.idioma == "EN" and "STATUS" or "ESTADO", W * 0.76, H * 0.27)
 
     -- Línea separadora
     love.graphics.setColor(0.5, 0.5, 0.5)
@@ -128,9 +129,9 @@ function RoomBrowser.draw(escena)
     if #rooms == 0 then
         love.graphics.setFont(UI.font("button"))
         love.graphics.setColor(0.5, 0.5, 0.5)
-        love.graphics.printf("No hay salas disponibles", 0, H * 0.45, W, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "No available rooms" or "No hay salas disponibles", 0, H * 0.45, W, "center")
         love.graphics.setFont(UI.font("small"))
-        love.graphics.printf("Crea una nueva sala o espera a que alguien cree una", 0, H * 0.50, W, "center")
+        love.graphics.printf(Settings.idioma == "EN" and "Create a new room or wait for someone to create one" or "Crea una nueva sala o espera a que alguien cree una", 0, H * 0.50, W, "center")
     else
         for i = 1, math.min(maxVisible, #rooms) do
             local roomIndex = i + scrollOffset
@@ -159,7 +160,8 @@ function RoomBrowser.draw(escena)
             -- Modo
             love.graphics.setFont(UI.font("small"))
             local infoY = y + (rowHeight - UI.font("small"):getHeight()) / 2 - 3
-            local modeName = gameModeNames[room.game_mode] or room.game_mode
+            local modeName = room.game_mode == "ffa" and (Settings.idioma == "EN" and "Free for All" or "Todos vs Todos") or
+                             room.game_mode == "2v2" and (Settings.idioma == "EN" and "Teams 2v2" or "Equipos 2v2") or "1 vs 1"
             love.graphics.print(modeName, W * 0.42, infoY)
 
             -- Jugadores
@@ -168,15 +170,16 @@ function RoomBrowser.draw(escena)
 
             -- Estado
             local statusInfo = statusNames[room.status] or statusNames.waiting
+            local statusText = Settings.idioma == "EN" and statusInfo.text_en or statusInfo.text_es
             love.graphics.setColor(statusInfo.color)
-            love.graphics.print(statusInfo.text, W * 0.76, infoY)
+            love.graphics.print(statusText, W * 0.76, infoY)
         end
 
         -- Indicador de scroll
         if #rooms > maxVisible then
             love.graphics.setFont(UI.font("small"))
             love.graphics.setColor(0.7, 0.7, 0.7)
-            love.graphics.printf(string.format("Mostrando %d-%d de %d",
+            love.graphics.printf(string.format(Settings.idioma == "EN" and "Showing %d-%d of %d" or "Mostrando %d-%d de %d",
                 scrollOffset + 1,
                 math.min(scrollOffset + maxVisible, #rooms),
                 #rooms),
@@ -187,7 +190,7 @@ function RoomBrowser.draw(escena)
     -- Instrucciones
     love.graphics.setFont(UI.font("small"))
     love.graphics.setColor(0.7, 0.7, 0.7)
-    love.graphics.printf("[↑↓] Navegar  |  [ENTER] Unirse  |  [F5] Refrescar  |  [ESC] Volver", 0, H * 0.90, W, "center")
+    love.graphics.printf(Settings.idioma == "EN" and "[↑↓] Navigate | [ENTER] Join | [F5] Refresh | [ESC] Back" or "[↑↓] Navegar  |  [ENTER] Unirse  |  [F5] Refrescar  |  [ESC] Volver", 0, H * 0.90, W, "center")
 end
 
 function RoomBrowser.keypressed(key, escena)

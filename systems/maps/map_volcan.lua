@@ -159,7 +159,7 @@ function Map.load()
             elseif t == "river" then
                 rivers[#rivers+1] = {x=bx, y=by, w=bw, h=bh, polygon=poly}
             elseif t == "bridge" then
-                bridges[#bridges+1] = {x=bx, y=by, w=bh, h=bh, polygon=poly}
+                bridges[#bridges+1] = {x=bx, y=by, w=bw, h=bh, polygon=poly}
             end
         end
     end

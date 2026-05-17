@@ -50,157 +50,157 @@ return {
       tiles = {
         {
           id = 0,
-          image = "../../assets/maps/volcan/mapa2_128/25.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/25.png",
           width = 128,
           height = 128
         },
         {
           id = 1,
-          image = "../../assets/maps/volcan/mapa2_128/26.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/26.png",
           width = 128,
           height = 128
         },
         {
           id = 2,
-          image = "../../assets/maps/volcan/mapa2_128/27.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/27.png",
           width = 128,
           height = 128
         },
         {
           id = 3,
-          image = "../../assets/maps/volcan/mapa2_128/28.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/28.png",
           width = 128,
           height = 128
         },
         {
           id = 4,
-          image = "../../assets/maps/volcan/mapa2_128/29.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/29.png",
           width = 128,
           height = 128
         },
         {
           id = 5,
-          image = "../../assets/maps/volcan/mapa2_128/15.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/15.png",
           width = 128,
           height = 128
         },
         {
           id = 6,
-          image = "../../assets/maps/volcan/mapa2_128/16.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/16.png",
           width = 128,
           height = 128
         },
         {
           id = 7,
-          image = "../../assets/maps/volcan/mapa2_128/17.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/17.png",
           width = 128,
           height = 128
         },
         {
           id = 8,
-          image = "../../assets/maps/volcan/mapa2_128/18.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/18.png",
           width = 128,
           height = 128
         },
         {
           id = 9,
-          image = "../../assets/maps/volcan/mapa2_128/19.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/19.png",
           width = 128,
           height = 128
         },
         {
           id = 10,
-          image = "../../assets/maps/volcan/mapa2_128/20.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/20.png",
           width = 128,
           height = 128
         },
         {
           id = 11,
-          image = "../../assets/maps/volcan/mapa2_128/40.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/40.png",
           width = 128,
           height = 128
         },
         {
           id = 12,
-          image = "../../assets/maps/volcan/mapa2_128/1.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/1.png",
           width = 128,
           height = 128
         },
         {
           id = 13,
-          image = "../../assets/maps/volcan/mapa2_128/2.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/2.png",
           width = 128,
           height = 128
         },
         {
           id = 14,
-          image = "../../assets/maps/volcan/mapa2_128/3.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/3.png",
           width = 128,
           height = 128
         },
         {
           id = 15,
-          image = "../../assets/maps/volcan/mapa2_128/4.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/4.png",
           width = 128,
           height = 128
         },
         {
           id = 16,
-          image = "../../assets/maps/volcan/mapa2_128/5.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/5.png",
           width = 128,
           height = 128
         },
         {
           id = 17,
-          image = "../../assets/maps/volcan/mapa2_128/6.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/6.png",
           width = 128,
           height = 128
         },
         {
           id = 18,
-          image = "../../assets/maps/volcan/mapa2_128/7.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/7.png",
           width = 128,
           height = 128
         },
         {
           id = 19,
-          image = "../../assets/maps/volcan/mapa2_128/8.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/8.png",
           width = 128,
           height = 128
         },
         {
           id = 20,
-          image = "../../assets/maps/volcan/mapa2_128/9.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/9.png",
           width = 128,
           height = 128
         },
         {
           id = 21,
-          image = "../../assets/maps/volcan/mapa2_128/10.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/10.png",
           width = 128,
           height = 128
         },
         {
           id = 22,
-          image = "../../assets/maps/volcan/mapa2_128/11.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/11.png",
           width = 128,
           height = 128
         },
         {
           id = 23,
-          image = "../../assets/maps/volcan/mapa2_128/12.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/12.png",
           width = 128,
           height = 128
         },
         {
           id = 24,
-          image = "../../assets/maps/volcan/mapa2_128/13.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/13.png",
           width = 128,
           height = 128
         },
         {
           id = 25,
-          image = "../../assets/maps/volcan/mapa2_128/14.png",
+          image = "../../assets/maps/volcan/volcano_objetos_128/14.png",
           width = 128,
           height = 128
         }

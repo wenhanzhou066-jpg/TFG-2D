@@ -4,7 +4,7 @@
 local Base = require("systems.menu.base")
 local Settings = require("systems.settings")
 local UI = require("systems.ui")
-local Red = require("network")
+local Red = require("src.network")
 
 local RoomBrowser = {}
 local searchInput = ""

@@ -17,7 +17,7 @@ local MAX_MUERTES = 3
 local eliminado = false
 local elimGoMenu = nil  -- guardado en keypressed/mousepressed para usarlo desde el overlay
 
-local Red = require("network")
+local Red = require("src.network")
 
 -- Mapa activo (STI). Los mapas procedurales están deshabilitados temporalmente.
 local allMaps = {

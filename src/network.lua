@@ -2,7 +2,7 @@
 -- Cliente UDP simple para juego de tanques multijugador
 
 local socket = require("socket")
-local binary_protocol = require("binary_protocol")
+local binary_protocol = require("src.binary_protocol")
 
 local Red = {}
 Red.udp = nil

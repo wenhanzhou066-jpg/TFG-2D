@@ -3,7 +3,7 @@
 
 local Base = require("systems.menu.base")
 local Settings = require("systems.settings")
-local Red = require("network")
+local Red = require("src.network")
 local UI = require("systems.ui")
 
 local Lobby = {}

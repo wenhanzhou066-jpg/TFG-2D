@@ -2,11 +2,11 @@
 -- Gestiona las escenas: menu, juego, multiplayer, oleadas, bots.
 
 local Menu            = require("systems.menu.init")
-local Game            = require("game")
-local GameMultiplayer = require("game_multiplayer")
-local GameOleadas     = require("game_oleadas")
-local GameBots        = require("game_bots")
-local Red             = require("network")
+local Game            = require("src.game")
+local GameMultiplayer = require("src.game_multiplayer")
+local GameOleadas     = require("src.game_oleadas")
+local GameBots        = require("src.game_bots")
+local Red             = require("src.network")
 
 local escena = "menu"
 

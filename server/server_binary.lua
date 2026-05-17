@@ -6,7 +6,7 @@ Soporta: posiciones, HP, balas, lobbies/rooms
 ]]
 
 local socket = require("socket")
-local binary_protocol = require("binary_protocol")
+local binary_protocol = require("src.binary_protocol")
 
 local HOST = "*"  -- Todas las interfaces
 local PORT = 12345

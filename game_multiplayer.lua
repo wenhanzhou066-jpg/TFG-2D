@@ -8,6 +8,7 @@ local leaderboard = require("systems.leaderboard")
 local Minimap     = require("systems.minimap")
 local Perfil      = require("systems.perfil")
 local Pausa       = require("systems.pausa")
+local Remap       = require("systems.controls_remap")
 
 local stats = { kills = 0, muertes = 0, victoria = false }
 local pausado = false
@@ -217,6 +218,7 @@ end
 
 function GameMultiplayer.update(dt)
     if eliminado then return end
+    Remap.update(dt)
     if pausado then
         Pausa.update(dt)
         return

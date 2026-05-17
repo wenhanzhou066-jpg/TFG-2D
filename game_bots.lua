@@ -27,6 +27,7 @@ Camera = {x=0, y=0}
 
 local Bot = require("entities.bot")
 local Pausa = require("systems.pausa")
+local Remap = require("systems.controls_remap")
 
 local GAME_W, GAME_H = 1920, 1080
 local gameCanvas = nil 
@@ -87,6 +88,8 @@ function GameBots.load(mapIdx, dificultad)
 end
 
 function GameBots.update(dt)
+    Remap.update(dt)
+    
     if pausado then
         Pausa.update(dt)
         local accion = Pausa.getAccion()
@@ -149,7 +152,16 @@ function GameBots.draw()
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
     Minimap.drawHUD(Camera.x, Camera.y, GameView)
 
-    if pausado then Pausa.draw() end
+    if pausado then 
+        Pausa.draw() 
+        if Remap.isVisible() then
+            love.graphics.push()
+            love.graphics.translate(GameView.ox, GameView.oy)
+            love.graphics.scale(GameView.scale, GameView.scale)
+            Remap.draw()
+            love.graphics.pop()
+        end
+    end
 end
 
 function GameBots.drawHUD()

@@ -794,6 +794,7 @@ function Personalizar.mousepressed(mx, my, btn, escena)
                                 colorAmmoR   = colorAmmoR,
                                 colorAmmoG   = colorAmmoG,
                                 colorAmmoB   = colorAmmoB,
+                                weaponIdx    = weaponIdx,
                             })
                         end
                         setMsg(Settings.idioma == "EN" and "Customization saved" or "Personalizacion guardada", true)

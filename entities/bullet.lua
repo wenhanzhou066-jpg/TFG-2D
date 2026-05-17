@@ -61,6 +61,11 @@ function Bullet.setPlayerWeapon(weaponModel)
     playerShellKey = WEAPON_TO_SHELL[weaponModel] or "light"
 end
 
+-- Obtener la clave de proyectil ("light", "heavy", ...) del arma actual del jugador
+function Bullet.getPlayerShellKey()
+    return playerShellKey
+end
+
 function Bullet.load()
     if not spritesLoaded then
         local base = "assets/images/PNG/Effects/"

@@ -10,6 +10,7 @@ local Http = {}
 
 Http.BASE_URL = "http://217.78.237.7:8080"
 Http.TIMEOUT  = 5  -- segundos
+socket_http.TIMEOUT = Http.TIMEOUT
 
 -- GET  →  devuelve tabla Lua decodificada, o nil + mensaje de error
 function Http.get(ruta)

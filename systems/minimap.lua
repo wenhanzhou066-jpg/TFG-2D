@@ -117,7 +117,8 @@ end
 
 -- Dibuja el HUD del minimapa en la esquina superior derecha de la pantalla.
 -- Llamar FUERA del gameCanvas (después de love.graphics.setCanvas()).
-function Minimap.drawHUD(camX, camY, gameView)
+-- `otherTanks` (opcional) es {[pid] = {x, y, hp, ...}} para dibujar enemigos en rojo.
+function Minimap.drawHUD(camX, camY, gameView, otherTanks)
     if not miniCanvas or not fogCanvas then return end
 
     local sw     = love.graphics.getWidth()
@@ -161,6 +162,18 @@ function Minimap.drawHUD(camX, camY, gameView)
     love.graphics.draw(fogCanvas, 0, 0, 0,
         MINI_W / fogW(),
         miniH  / fogH())
+
+    -- Puntos rojos de tanques enemigos (solo en multijugador)
+    if otherTanks then
+        love.graphics.setColor(1, 0.2, 0.2)
+        for _, t in pairs(otherTanks) do
+            if t.x and t.y and (t.hp == nil or t.hp > 0) then
+                love.graphics.circle("fill",
+                    t.x * scaleX,
+                    t.y * scaleY, 4)
+            end
+        end
+    end
 
     -- Punto verde del jugador
     love.graphics.setColor(0, 1, 0)

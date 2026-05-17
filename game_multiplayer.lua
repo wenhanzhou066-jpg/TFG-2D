@@ -83,6 +83,13 @@ function GameMultiplayer.damageOtherTank(pid, damage)
         -- Checar si murió
         if oldHp > 0 and otherTanks[pid].hp <= 0 then
             Effects.spawnExplosion(otherTanks[pid].x, otherTanks[pid].y)
+            stats.kills = stats.kills + 1
+            -- Comprobar victoria: todos los oponentes eliminados
+            local todosEliminados = true
+            for _, t in pairs(otherTanks) do
+                if t.hp > 0 then todosEliminados = false; break end
+            end
+            if todosEliminados then stats.victoria = true end
             return true  -- Kill confirmado
         end
     end
@@ -112,6 +119,7 @@ end
 -- Sprites para tanques enemigos
 local otherTankSprites = {}
 
+function GameMultiplayer._getStats()  return stats end
 function GameMultiplayer.addKill()   stats.kills   = stats.kills   + 1 end
 function GameMultiplayer.addMuerte()
     stats.muertes = stats.muertes + 1
@@ -149,7 +157,6 @@ function GameMultiplayer.load(mapIdx)
     if not subsystemsLoaded then
         Tank.load(spawn.x, spawn.y)
         Bullet.load()
-        Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
         Powerup.load()
         Effects.load()
         Tracks.load()
@@ -158,10 +165,16 @@ function GameMultiplayer.load(mapIdx)
         -- Cargar sprites para otros tanques
         otherTankSprites.tracks = love.graphics.newImage("assets/images/PNG/Tracks/Track_1_A.png")
         otherTankSprites.hull = love.graphics.newImage("assets/images/PNG/Hulls_Color_B/Hull_01.png")
-        otherTankSprites.weapon = love.graphics.newImage("assets/images/PNG/Weapon_Color_B/Gun_01.png")
+        otherTankSprites.weapons = {}
+        for i = 1, 8 do
+            local nn = string.format("%02d", i)
+            otherTankSprites.weapons[i] = love.graphics.newImage("assets/images/PNG/Weapon_Color_B/Gun_" .. nn .. ".png")
+        end
+        otherTankSprites.weapon = otherTankSprites.weapons[1]  -- compat
     else
         Tank.load(spawn.x, spawn.y)
     end
+    Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
 
     -- Override ammo to finite clip for multiplayer (single-player keeps 999)
     local tanks = Tank.getTanks()
@@ -169,6 +182,10 @@ function GameMultiplayer.load(mapIdx)
         tanks[1].maxAmmo = 6
         tanks[1].ammo = 6
         tanks[1].reloadDuration = 2.0
+    end
+
+    if Tank.setWeaponIdx then
+        Tank.setWeaponIdx((Perfil.activo and Perfil.activo.weaponIdx) or 1, 1)
     end
 
     -- Spawnar power-ups
@@ -181,6 +198,18 @@ function GameMultiplayer.load(mapIdx)
     Audio.load(mapIdx or 1)
     Minimap.load()
     Pausa.load()
+
+    -- Enviar perfil propio al servidor para que los demás vean nuestros colores y gamertag
+    local p = Perfil.activo
+    if p then
+        Red.enviar_profile({
+            gamertag = p.gamertag,
+            color_body_r = p.colorBodyR, color_body_g = p.colorBodyG, color_body_b = p.colorBodyB,
+            color_turret_r = p.colorTurretR, color_turret_g = p.colorTurretG, color_turret_b = p.colorTurretB,
+            color_ammo_r = p.colorAmmoR, color_ammo_g = p.colorAmmoG, color_ammo_b = p.colorAmmoB,
+            weapon_idx = p.weaponIdx or 1,
+        })
+    end
 
     -- La red ya está inicializada desde el lobby
     print("[MULTIPLAYER] Juego iniciado")
@@ -330,6 +359,8 @@ function GameMultiplayer.draw()
     love.graphics.setColor(1, 1, 1)
     love.graphics.draw(gameCanvas, GameView.ox, GameView.oy, 0, GameView.scale, GameView.scale)
 
+    Minimap.drawHUD(Camera.x, Camera.y, GameView, otherTanks)
+
     if eliminado then
         GameMultiplayer.drawEliminacionOverlay()
     end
@@ -402,12 +433,17 @@ end
 
 function GameMultiplayer.drawOtherTanks()
     local escala = 0.3
-
-    -- Debug: mostrar cuántos tanques hay que dibujar
-    local count = 0
-    for _ in pairs(otherTanks) do count = count + 1 end
+    local profiles = Red.get_other_profiles and Red.get_other_profiles() or {}
 
     for pid, tank in pairs(otherTanks) do
+        local prof = profiles[pid]
+        local bodyR  = prof and prof.color_body_r   or 1
+        local bodyG  = prof and prof.color_body_g   or 1
+        local bodyB  = prof and prof.color_body_b   or 1
+        local turR   = prof and prof.color_turret_r or 1
+        local turG   = prof and prof.color_turret_g or 1
+        local turB   = prof and prof.color_turret_b or 1
+
         love.graphics.push()
         love.graphics.translate(tank.x, tank.y)
 
@@ -425,10 +461,10 @@ function GameMultiplayer.drawOtherTanks()
         )
         love.graphics.pop()
 
-        -- Hull
+        -- Hull (tintado con color del cuerpo del perfil)
         love.graphics.push()
         love.graphics.rotate(tank.angulo + math.pi/2)
-        love.graphics.setColor(1, 1, 1)
+        love.graphics.setColor(bodyR, bodyG, bodyB)
         love.graphics.draw(
             otherTankSprites.hull,
             0, 0,
@@ -439,24 +475,34 @@ function GameMultiplayer.drawOtherTanks()
         )
         love.graphics.pop()
 
-        -- Weapon
+        -- Weapon (tintado con color de la torreta del perfil, sprite según weapon_idx)
+        local wIdx = (prof and prof.weapon_idx) or 1
+        if wIdx < 1 or wIdx > 8 then wIdx = 1 end
+        local wSprite = (otherTankSprites.weapons and otherTankSprites.weapons[wIdx]) or otherTankSprites.weapon
         love.graphics.push()
         love.graphics.translate(15 * math.cos(tank.turretAngle), 15 * math.sin(tank.turretAngle))
         love.graphics.rotate(tank.turretAngle + math.pi/2)
-        love.graphics.setColor(1, 1, 1)
+        love.graphics.setColor(turR, turG, turB)
         love.graphics.draw(
-            otherTankSprites.weapon,
+            wSprite,
             0, 0,
             0,
             escala, escala,
-            otherTankSprites.weapon:getWidth()/2,
-            otherTankSprites.weapon:getHeight()/2
+            wSprite:getWidth()/2,
+            wSprite:getHeight()/2
         )
         love.graphics.pop()
 
-        -- ID del jugador
-        love.graphics.setColor(1, 0, 0)
-        love.graphics.print("P" .. pid, 0 - 10, -50)
+        -- Etiqueta con gamertag (o fallback P<pid>)
+        local label = (prof and prof.gamertag and #prof.gamertag > 0) and prof.gamertag or ("P" .. pid)
+        local UI = require("systems.ui")
+        local font = UI.font("small") or love.graphics.getFont()
+        love.graphics.setFont(font)
+        local tw = font:getWidth(label)
+        love.graphics.setColor(0, 0, 0, 0.6)
+        love.graphics.rectangle("fill", -tw/2 - 4, -68, tw + 8, font:getHeight() + 4, 3)
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(label, -tw/2, -66)
 
         -- Barra de vida
         local barW = 60
@@ -686,9 +732,10 @@ function GameMultiplayer.mousepressed(x, y, button, goMenu)
 
     if button == 1 and Tank.shoot() then
         local bx, by, angle = Tank.getMuzzlePos()
-        Bullet.spawn(bx, by, angle, "light", "local")
+        local shell = Bullet.getPlayerShellKey and Bullet.getPlayerShellKey() or nil
+        Bullet.spawn(bx, by, angle, shell, "local")
         Effects.spawnSmoke(bx, by, angle)
-        Red.enviar_bala(bx, by, angle, "light")
+        Red.enviar_bala(bx, by, angle, shell or "light")
     end
 end
 

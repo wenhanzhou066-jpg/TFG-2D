@@ -39,6 +39,8 @@ Red.powerup_events = {}  -- Eventos de powerup del servidor (AUTH)
 Red.map_idx = 1  -- Índice de mapa sincronizado con el servidor
 Red.in_game = false  -- Activa envío de posición solo durante partida
 Red.debug = false  -- Activar para logs verbosos
+Red.other_profiles = {}  -- {pid = {gamertag, colors..., weapon_idx}}
+Red.profile_pendiente = nil  -- Perfil propio aún por enviar tras WELCOME
 
 function Red.init(ip_servidor, puerto_servidor)
     print("[CLIENT] Inicializando red...")
@@ -110,6 +112,8 @@ function Red.desconectar()
     Red.update_llamado = false
     Red.in_game = false
     Red.powerup_events = {}
+    Red.other_profiles = {}
+    Red.profile_pendiente = nil
     if Red.udp then
         Red.udp:close()
         Red.udp = nil
@@ -133,6 +137,44 @@ function Red.enviar_actualizacion(x, y, angulo, hp)
     if not enviado and err then
         print("[WARNING] Error de envío: " .. err)
     end
+end
+
+-- Enviar perfil propio al servidor (se reenvía a los demás de la sala).
+-- profile = {gamertag, color_body_r/g/b, color_turret_r/g/b, color_ammo_r/g/b, weapon_idx}
+function Red.enviar_profile(profile)
+    if not Red.udp then
+        Red.profile_pendiente = profile
+        return
+    end
+    if not Red.conectado or not Red.id_jugador then
+        Red.profile_pendiente = profile
+        return
+    end
+    local msg = binary_protocol.encode({
+        type = "profile",
+        player_id = Red.id_jugador,
+        gamertag = profile.gamertag or "",
+        color_body_r = profile.color_body_r or 1,
+        color_body_g = profile.color_body_g or 1,
+        color_body_b = profile.color_body_b or 1,
+        color_turret_r = profile.color_turret_r or 1,
+        color_turret_g = profile.color_turret_g or 1,
+        color_turret_b = profile.color_turret_b or 1,
+        color_ammo_r = profile.color_ammo_r or 1,
+        color_ammo_g = profile.color_ammo_g or 1,
+        color_ammo_b = profile.color_ammo_b or 1,
+        weapon_idx = profile.weapon_idx or 1,
+    })
+    local enviado, err = Red.udp:send(msg)
+    if not enviado and err then
+        print("[WARNING] Error de envío de perfil: " .. err)
+    else
+        Red.profile_pendiente = nil
+    end
+end
+
+function Red.get_other_profiles()
+    return Red.other_profiles
 end
 
 function Red.enviar_bala(x, y, angulo, tipo_bala)
@@ -261,6 +303,25 @@ function Red.manejar_mensaje(msg)
             print("[CLIENT] *** CONECTADO! ID Jugador: " .. Red.id_jugador .. " | Sala: " .. Red.id_sala .. " | Mapa: " .. Red.map_idx .. " ***")
         else
             print("[CLIENT] *** CONECTADO! ID Jugador: " .. Red.id_jugador .. " ***")
+        end
+
+        -- Enviar perfil pendiente ahora que tenemos id_jugador
+        if Red.profile_pendiente then
+            Red.enviar_profile(Red.profile_pendiente)
+        end
+
+    elseif tipo_msg == "profile" then
+        if msg.player_id and msg.player_id ~= Red.id_jugador then
+            Red.other_profiles[msg.player_id] = {
+                gamertag = msg.gamertag,
+                color_body_r = msg.color_body_r, color_body_g = msg.color_body_g, color_body_b = msg.color_body_b,
+                color_turret_r = msg.color_turret_r, color_turret_g = msg.color_turret_g, color_turret_b = msg.color_turret_b,
+                color_ammo_r = msg.color_ammo_r, color_ammo_g = msg.color_ammo_g, color_ammo_b = msg.color_ammo_b,
+                weapon_idx = msg.weapon_idx,
+            }
+            if Red.debug then
+                print("[CLIENT] Perfil recibido pid=" .. msg.player_id .. " gamertag='" .. (msg.gamertag or "") .. "'")
+            end
         end
 
     elseif tipo_msg == "state" then

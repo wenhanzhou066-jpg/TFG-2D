@@ -133,17 +133,29 @@ local function createTankData(sx, sy)
         -- Powerups activos
         speedBoostTimer = 0,
         ammoBoostTimer = 0,
+        -- Arma seleccionada (1-8)
+        weaponIdx = 1,
     }
 end
 
 function tanque.load(sx, sy)
     sprites.tracks = love.graphics.newImage("assets/images/PNG/Tracks/Track_1_A.png")
     sprites.hull   = love.graphics.newImage("assets/images/PNG/Hulls_Color_A/Hull_01.png")
-    sprites.weapon = love.graphics.newImage("assets/images/PNG/Weapon_Color_A/Gun_01.png")
 
     -- Sprites alternativos para J2 (pueden ser B)
     sprites.hull2   = love.graphics.newImage("assets/images/PNG/Hulls_Color_B/Hull_01.png")
-    sprites.weapon2 = love.graphics.newImage("assets/images/PNG/Weapon_Color_B/Gun_01.png")
+
+    -- Cargar 8 sprites de arma (1-8) por jugador. Los assets se llaman Gun_01..Gun_08.
+    sprites.weapons  = {}
+    sprites.weapons2 = {}
+    for i = 1, 8 do
+        local nn = string.format("%02d", i)
+        sprites.weapons[i]  = love.graphics.newImage("assets/images/PNG/Weapon_Color_A/Gun_" .. nn .. ".png")
+        sprites.weapons2[i] = love.graphics.newImage("assets/images/PNG/Weapon_Color_B/Gun_" .. nn .. ".png")
+    end
+    -- Compatibilidad con código antiguo que lea sprites.weapon directamente
+    sprites.weapon  = sprites.weapons[1]
+    sprites.weapon2 = sprites.weapons2[1]
 
     sprites.tracksPivot = { x = sprites.tracks:getWidth()/2, y = sprites.tracks:getHeight()/2 }
     sprites.hullPivot   = { x = sprites.hull:getWidth()/2,   y = sprites.hull:getHeight()/2   }
@@ -154,6 +166,14 @@ function tanque.load(sx, sy)
     tanks[1] = createTankData(sx, sy)
 
     timerInvulnerable = 0
+end
+
+-- Cambiar el modelo de arma (1-8) de un tanque local. id por defecto 1.
+function tanque.setWeaponIdx(idx, id)
+    id = id or 1
+    if not tanks[id] then return end
+    idx = math.max(1, math.min(8, math.floor(idx or 1)))
+    tanks[id].weaponIdx = idx
 end
 
 function tanque.loadCoop(sx, sy)
@@ -351,15 +371,18 @@ function tanque.draw()
                 end
 
                 local hullSprite = id == 2 and sprites.hull2 or sprites.hull
-                local weaponSprite = id == 2 and sprites.weapon2 or sprites.weapon
+                local wIdx = datos.weaponIdx or 1
+                local weaponSet = id == 2 and sprites.weapons2 or sprites.weapons
+                local weaponSprite = (weaponSet and weaponSet[wIdx]) or sprites.weapon
 
                 love.graphics.setColor(cr, cg, cb)
                 drawSprite(hullSprite, sprites.hullPivot, datos.angulo + math.pi/2, datos.x, datos.y)
 
                 local tx = datos.x + math.cos(datos.anguloTorreta) * sprites.weaponOffset
                 local ty = datos.y + math.sin(datos.anguloTorreta) * sprites.weaponOffset
+                local pivot = { x = weaponSprite:getWidth()/2, y = weaponSprite:getHeight()/2 }
                 love.graphics.setColor(tr, tg, tb)
-                drawSprite(weaponSprite, sprites.weaponPivot, datos.anguloTorreta + math.pi/2, tx, ty)
+                drawSprite(weaponSprite, pivot, datos.anguloTorreta + math.pi/2, tx, ty)
 
                 -- Indicadores visuales de powerups activos
                 if datos.speedBoostTimer > 0 then

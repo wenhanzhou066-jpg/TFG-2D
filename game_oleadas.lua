@@ -75,16 +75,20 @@ function GameOleadas.load(mapIdx, modoJuego)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
-        Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
     else
         Tank.load(sp.x, sp.y)
     end
+    Bullet.setPlayerWeapon(Perfil.activo and Perfil.activo.weaponIdx or 1)
 
     local tanks = Tank.getTanks()
     if tanks[1] then tanks[1].maxAmmo = 6; tanks[1].ammo = 6; tanks[1].reloadDuration = 2.0 end
+
+    if Tank.setWeaponIdx then
+        Tank.setWeaponIdx((Perfil.activo and Perfil.activo.weaponIdx) or 1, 1)
+    end
 
     if modo == "coop" then
         Tank.loadCoop(sp.x + 80, sp.y)

@@ -135,3 +135,20 @@ end
 function love.resize(w, h)
     if escena == "menu" then Menu.resize(w, h) end
 end
+
+function love.quit()
+    if Perfil and Perfil.activo then
+        local leaderboard = require("systems.leaderboard")
+        local victoria = false
+        local kills, muertes = 0, 0
+        if escena == "multiplayer" then
+            kills   = GameMultiplayer._getStats and GameMultiplayer._getStats().kills   or 0
+            muertes = GameMultiplayer._getStats and GameMultiplayer._getStats().muertes or 0
+            victoria = GameMultiplayer._getStats and GameMultiplayer._getStats().victoria or false
+            leaderboard.enviarPartida(Perfil.activo.gamertag, kills, muertes, victoria, "multi")
+            Red.desconectar()
+        elseif escena == "bots" or escena == "oleadas" or escena == "juego" then
+            leaderboard.enviarPartida(Perfil.activo.gamertag, kills, muertes, false, "local")
+        end
+    end
+end

@@ -20,6 +20,7 @@ function Room.new(room_id, metadata)
     self.room_id = room_id
     self.clients = {}  -- {addr_key = player_id}
     self.players = {}  -- {player_id = {x, y, angle, hp, last_seen}}
+    self.profiles = {}  -- {player_id = {gamertag, color_body_*, color_turret_*, color_ammo_*, weapon_idx}}
     self.next_player_id = 1
     self.metadata = metadata or {game_mode = "ffa", max_players = 8}
     return self
@@ -44,6 +45,7 @@ function Room:remove_client(addr_key)
         local player_id = self.clients[addr_key]
         self.clients[addr_key] = nil
         self.players[player_id] = nil
+        self.profiles[player_id] = nil
     end
 end
 
@@ -131,6 +133,8 @@ function GameServer:handle_message(data, ip, port)
         self:handle_disconnect(addr_key)
     elseif msg_type == binary_protocol.MSG_LIST_ROOMS then
         self:handle_list_rooms(ip, port)
+    elseif msg_type == binary_protocol.MSG_PROFILE then
+        self:handle_profile(data, ip, port, addr_key)
     end
 end
 
@@ -189,8 +193,72 @@ function GameServer:handle_connect(data, ip, port, addr_key)
 
     self.udp:sendto(response, ip, port)
 
+    -- Reenviar perfiles ya conocidos al recién llegado
+    for known_pid, prof in pairs(room.profiles) do
+        if known_pid ~= player_id then
+            local p_msg = binary_protocol.encode({
+                type = "profile",
+                player_id = known_pid,
+                gamertag = prof.gamertag,
+                color_body_r = prof.color_body_r, color_body_g = prof.color_body_g, color_body_b = prof.color_body_b,
+                color_turret_r = prof.color_turret_r, color_turret_g = prof.color_turret_g, color_turret_b = prof.color_turret_b,
+                color_ammo_r = prof.color_ammo_r, color_ammo_g = prof.color_ammo_g, color_ammo_b = prof.color_ammo_b,
+                weapon_idx = prof.weapon_idx,
+            })
+            self.udp:sendto(p_msg, ip, port)
+        end
+    end
+
     -- Broadcast updated player list so existing clients see the new joiner immediately
     self:broadcast_state(room)
+end
+
+function GameServer:handle_profile(data, ip, port, addr_key)
+    local success, msg = pcall(function() return binary_protocol.decode(data) end)
+    if not success or not msg then return end
+
+    local room_id = self.addr_to_room[addr_key]
+    if not room_id then return end
+    local room = self.rooms[room_id]
+    if not room then return end
+
+    local player_id = room.clients[addr_key]
+    if not player_id then return end
+
+    room.profiles[player_id] = {
+        gamertag = msg.gamertag or "",
+        color_body_r = msg.color_body_r, color_body_g = msg.color_body_g, color_body_b = msg.color_body_b,
+        color_turret_r = msg.color_turret_r, color_turret_g = msg.color_turret_g, color_turret_b = msg.color_turret_b,
+        color_ammo_r = msg.color_ammo_r, color_ammo_g = msg.color_ammo_g, color_ammo_b = msg.color_ammo_b,
+        weapon_idx = msg.weapon_idx,
+    }
+
+    print(string.format("[PROFILE] Player %d -> '%s' (weapon %d)",
+        player_id, room.profiles[player_id].gamertag, room.profiles[player_id].weapon_idx or 1))
+
+    -- Reenviar a todos los otros clientes de la sala
+    local out = binary_protocol.encode({
+        type = "profile",
+        player_id = player_id,
+        gamertag = room.profiles[player_id].gamertag,
+        color_body_r = room.profiles[player_id].color_body_r,
+        color_body_g = room.profiles[player_id].color_body_g,
+        color_body_b = room.profiles[player_id].color_body_b,
+        color_turret_r = room.profiles[player_id].color_turret_r,
+        color_turret_g = room.profiles[player_id].color_turret_g,
+        color_turret_b = room.profiles[player_id].color_turret_b,
+        color_ammo_r = room.profiles[player_id].color_ammo_r,
+        color_ammo_g = room.profiles[player_id].color_ammo_g,
+        color_ammo_b = room.profiles[player_id].color_ammo_b,
+        weapon_idx = room.profiles[player_id].weapon_idx,
+    })
+
+    for other_addr, _ in pairs(room.clients) do
+        if other_addr ~= addr_key then
+            local oip, oport = other_addr:match("([^:]+):(%d+)")
+            self.udp:sendto(out, oip, tonumber(oport))
+        end
+    end
 end
 
 function GameServer:handle_update(data, ip, port, addr_key)

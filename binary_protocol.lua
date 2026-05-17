@@ -23,6 +23,7 @@ BinaryProtocol.MSG_ROOMS_LIST = 0x08
 BinaryProtocol.MSG_POWERUP_COLLECT = 0x09  -- Cliente → Servidor: solicitar recolección de powerup
 BinaryProtocol.MSG_POWERUP_COLLECTED = 0x0A  -- Servidor → Clientes: powerup fue recogido
 BinaryProtocol.MSG_POWERUP_SPAWN = 0x0B  -- Servidor → Clientes: powerup reapareció
+BinaryProtocol.MSG_PROFILE = 0x0C  -- Cliente → Servidor → Clientes: identidad y personalización
 
 -- Fase 2: Mensajes protocolo V2 (prefijados con VERSION_BYTE = 0xF0)
 BinaryProtocol.MSG_INPUT = 0x10  -- Cliente → Servidor: estado de entrada
@@ -204,6 +205,18 @@ function BinaryProtocol.encode(msg)
         result = result .. pack_float(msg.y or 0)
         result = result .. pack_angle(msg.angle or 0)
         result = result .. pack_string(msg.bullet_type or "plasma", 16)
+        return result
+
+    elseif msg_type == "profile" then
+        -- [type:1][player_id:2][gamertag:str][body_r/g/b:3][turret_r/g/b:3][ammo_r/g/b:3][weapon_idx:1]
+        local result = pack_byte(BinaryProtocol.MSG_PROFILE)
+        result = result .. pack_short(msg.player_id or 0)
+        result = result .. pack_string(msg.gamertag or "", 32)
+        local function c(v) return pack_byte(math.max(0, math.min(255, math.floor((v or 1) * 255)))) end
+        result = result .. c(msg.color_body_r) .. c(msg.color_body_g) .. c(msg.color_body_b)
+        result = result .. c(msg.color_turret_r) .. c(msg.color_turret_g) .. c(msg.color_turret_b)
+        result = result .. c(msg.color_ammo_r) .. c(msg.color_ammo_g) .. c(msg.color_ammo_b)
+        result = result .. pack_byte(math.max(1, math.min(8, math.floor(msg.weapon_idx or 1))))
         return result
 
     elseif msg_type == "disconnect" then
@@ -604,6 +617,25 @@ function BinaryProtocol.decode(data)
 
     elseif msg_type == BinaryProtocol.MSG_DISCONNECT then
         return {type = "disconnect"}
+
+    elseif msg_type == BinaryProtocol.MSG_PROFILE then
+        local player_id, gamertag
+        player_id, offset = unpack_short(data, offset)
+        gamertag, offset = unpack_string(data, offset)
+        local function rc() local b; b, offset = unpack_byte(data, offset); return b / 255 end
+        local cbR, cbG, cbB = rc(), rc(), rc()
+        local ctR, ctG, ctB = rc(), rc(), rc()
+        local caR, caG, caB = rc(), rc(), rc()
+        local weapon_idx; weapon_idx, offset = unpack_byte(data, offset)
+        return {
+            type = "profile",
+            player_id = player_id,
+            gamertag = gamertag,
+            color_body_r = cbR, color_body_g = cbG, color_body_b = cbB,
+            color_turret_r = ctR, color_turret_g = ctG, color_turret_b = ctB,
+            color_ammo_r = caR, color_ammo_g = caG, color_ammo_b = caB,
+            weapon_idx = weapon_idx,
+        }
 
     elseif msg_type == BinaryProtocol.MSG_LIST_ROOMS then
         return {type = "list_rooms"}

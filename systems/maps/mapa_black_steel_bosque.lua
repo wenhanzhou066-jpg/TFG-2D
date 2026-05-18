@@ -2404,7 +2404,7 @@ return {
           opacity = 1,
           visible = true,
           properties = {
-            ["kind"] = "speed"
+            ["kind"] = "health"
           }
         },
         {
@@ -2420,7 +2420,7 @@ return {
           opacity = 1,
           visible = true,
           properties = {
-            ["kind"] = "speed"
+            ["kind"] = "health"
           }
         },
         {
@@ -2436,7 +2436,7 @@ return {
           opacity = 1,
           visible = true,
           properties = {
-            ["kind"] = "speed"
+            ["kind"] = "ammo"
           }
         },
         {
@@ -2452,7 +2452,7 @@ return {
           opacity = 1,
           visible = true,
           properties = {
-            ["kind"] = "speed"
+            ["kind"] = "ammo"
           }
         },
         {
@@ -2468,7 +2468,7 @@ return {
           opacity = 1,
           visible = true,
           properties = {
-            ["kind"] = "speed"
+            ["kind"] = "shield"
           }
         },
         {

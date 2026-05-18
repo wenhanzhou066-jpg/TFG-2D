@@ -56,16 +56,6 @@ end
 local otherTanks = {} -- {player_id: {x, y, angulo, turretAngle, target_x, target_y, target_angulo, hp, maxHp}}
 local subsystemsLoaded = false
 
--- Sistema de notificaciones de powerups
-local powerupNotification = {
-    active = false,
-    text = "",
-    timer = 0,
-    duration = 3.0,  -- Mostrar por 3 segundos
-    powerupTimer = 0,  -- Tiempo restante del powerup
-    powerupDuration = 0  -- Duración total del powerup
-}
-
 -- Suavizado de interpolación
 local INTERP_SPEED = 15  -- Velocidad de interpolación (mayor = más rápido, menos lag)
 
@@ -97,24 +87,9 @@ function GameMultiplayer.damageOtherTank(pid, damage)
     return false
 end
 
--- Mostrar notificación de powerup recogido
+-- Mostrar notificación de powerup recogido (wrapper para compatibilidad)
 function GameMultiplayer.showPowerupNotification(powerupType, duration)
-    local names = Settings.idioma == "EN" and {
-        health = "MEDKIT",
-        ammo = "RAPID FIRE",
-        shield = "SHIELD",
-        speed = "SPEED"
-    } or {
-        health = "KIT MÉDICO",
-        ammo = "DISPARO RÁPIDO",
-        shield = "ESCUDO",
-        speed = "VELOCIDAD"
-    }
-    powerupNotification.text = names[powerupType] or (Settings.idioma == "EN" and "UPGRADE" or "MEJORA")
-    powerupNotification.active = true
-    powerupNotification.timer = 0
-    powerupNotification.powerupTimer = duration or 0
-    powerupNotification.powerupDuration = duration or 0
+    Powerup.showAlert(powerupType, duration)
 end
 
 -- Sprites para tanques enemigos
@@ -134,8 +109,6 @@ function GameMultiplayer.load(mapIdx)
     eliminado = false
     elimGoMenu = nil
     otherTanks = {}
-    powerupNotification.active = false
-    powerupNotification.timer = 0
     Red.in_game = true
     recalcView()
     if not gameCanvas then
@@ -231,17 +204,6 @@ function GameMultiplayer.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
 
-    -- Actualizar notificación de powerup
-    if powerupNotification.active then
-        powerupNotification.timer = powerupNotification.timer + dt
-        if powerupNotification.powerupDuration > 0 then
-            powerupNotification.powerupTimer = math.max(0, powerupNotification.powerupTimer - dt)
-        end
-        if powerupNotification.timer >= powerupNotification.duration then
-            powerupNotification.active = false
-        end
-    end
-
     -- Actualizar cámara para seguir al tanque
     local mapSize = Map.getSize()
     local tx, ty = Tank.getPosition()
@@ -321,7 +283,7 @@ function GameMultiplayer.update(dt)
         if ev.kind == "collected" then
             Powerup.removeByIndex(ev.index)
             if ev.player_id == Red.id_jugador then
-                GameMultiplayer.showPowerupNotification(ev.powerup_type, 15)
+                Powerup.showAlert(ev.powerup_type, 15)
             end
         elseif ev.kind == "spawn" then
             Powerup.respawnByIndex(ev.index)
@@ -555,33 +517,7 @@ function GameMultiplayer.drawHUD()
     love.graphics.print(string.format(Settings.idioma == "EN" and "Kills: %d | Deaths: %d" or "Kills: %d | Muertes: %d", stats.kills, stats.muertes), 10, 10)
 
     -- Notificación de powerup (centrada arriba)
-    if powerupNotification.active then
-        local W = GAME_W
-        local font = UI.font("button") or love.graphics.getFont()
-        love.graphics.setFont(font)
-
-        local text = powerupNotification.text
-        if powerupNotification.powerupDuration > 0 then
-            text = text .. string.format(" (%.1fs)", powerupNotification.powerupTimer)
-        end
-
-        local tw = font:getWidth(text)
-        local th = font:getHeight()
-        local nx = W/2 - tw/2
-        local ny = 100
-
-        -- Fondo semi-transparente
-        love.graphics.setColor(0, 0, 0, 0.7)
-        love.graphics.rectangle("fill", nx - 20, ny - 10, tw + 40, th + 20, 8)
-
-        -- Borde dorado
-        love.graphics.setColor(0.85, 0.68, 0.18, 1)
-        love.graphics.rectangle("line", nx - 20, ny - 10, tw + 40, th + 20, 8)
-
-        -- Texto
-        love.graphics.setColor(0.2, 1.0, 0.2)
-        love.graphics.print(text, nx, ny)
-    end
+    Powerup.drawAlert(GAME_W)
 
     -- Ammo HUD (bottom-center)
     local font = UI.font("button") or love.graphics.getFont()

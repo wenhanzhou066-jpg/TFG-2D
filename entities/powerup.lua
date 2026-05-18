@@ -5,6 +5,16 @@ local Powerup = {}
 local active = {}
 local sprites = {}
 
+-- Banner de alerta al recoger power-up (compartido entre todos los modos)
+local notification = {
+    active = false,
+    text = "",
+    timer = 0,
+    duration = 3.0,
+    powerupTimer = 0,
+    powerupDuration = 0,
+}
+
 -- Tipos de power-ups
 local PowerupTypes = {
     health = {
@@ -92,6 +102,16 @@ end
 
 -- Update: animación y detección de colisión con tanque
 function Powerup.update(dt)
+    if notification.active then
+        notification.timer = notification.timer + dt
+        if notification.powerupDuration > 0 then
+            notification.powerupTimer = math.max(0, notification.powerupTimer - dt)
+        end
+        if notification.timer >= notification.duration then
+            notification.active = false
+        end
+    end
+
     for i = #active, 1, -1 do
         local p = active[i]
 
@@ -150,12 +170,60 @@ function Powerup.collect(index, id)
         Audio.powerup()
     end
 
-    -- Notificación (multiplayer o singleplayer)
-    if GameMultiplayer and GameMultiplayer.showPowerupNotification then
-        GameMultiplayer.showPowerupNotification(p.tipo, pType.duration)
-    end
+    -- Notificación visual (banner)
+    Powerup.showAlert(p.tipo, pType.duration)
 
     print("[POWERUP] Recogido: " .. p.tipo)
+end
+
+-- Mostrar banner de alerta para un powerup recogido
+function Powerup.showAlert(powerupType, duration)
+    local Settings = require("systems.settings")
+    local names = (Settings.idioma == "EN") and {
+        health = "MEDKIT",
+        ammo   = "RAPID FIRE",
+        shield = "SHIELD",
+        speed  = "SPEED"
+    } or {
+        health = "KIT MÉDICO",
+        ammo   = "DISPARO RÁPIDO",
+        shield = "ESCUDO",
+        speed  = "VELOCIDAD"
+    }
+    notification.text = names[powerupType] or (Settings.idioma == "EN" and "UPGRADE" or "MEJORA")
+    notification.active = true
+    notification.timer = 0
+    notification.powerupTimer = duration or 0
+    notification.powerupDuration = duration or 0
+end
+
+-- Dibujar banner en HUD (W = ancho del canvas/pantalla)
+function Powerup.drawAlert(W)
+    if not notification.active then return end
+    local UI = require("systems.ui")
+    local font = UI.font("button") or love.graphics.getFont()
+    love.graphics.setFont(font)
+
+    local text = notification.text
+    if notification.powerupDuration > 0 then
+        text = text .. string.format(" (%.1fs)", notification.powerupTimer)
+    end
+
+    local tw = font:getWidth(text)
+    local th = font:getHeight()
+    local nx = W/2 - tw/2
+    local ny = 100
+
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle("fill", nx - 20, ny - 10, tw + 40, th + 20, 8)
+
+    love.graphics.setColor(0.85, 0.68, 0.18, 1)
+    love.graphics.rectangle("line", nx - 20, ny - 10, tw + 40, th + 20, 8)
+
+    love.graphics.setColor(0.2, 1.0, 0.2)
+    love.graphics.print(text, nx, ny)
+
+    love.graphics.setColor(1, 1, 1)
 end
 
 -- Dibujar power-ups
@@ -204,6 +272,26 @@ end
 -- Obtener power-ups activos (para multiplayer sync)
 function Powerup.getActive()
     return active
+end
+
+-- Marcar power-up como recogido (usado por AUTH multiplayer)
+function Powerup.removeByIndex(index)
+    local p = active[index]
+    if not p then return end
+    if not p.collected then
+        if Effects then Effects.spawnFlash(p.x, p.y) end
+        if Audio and Audio.powerup then Audio.powerup() end
+    end
+    p.collected = true
+    p.respawnTimer = 0
+end
+
+-- Forzar respawn de un power-up por índice (usado por AUTH multiplayer)
+function Powerup.respawnByIndex(index)
+    local p = active[index]
+    if not p then return end
+    p.collected = false
+    p.respawnTimer = 0
 end
 
 return Powerup

@@ -131,6 +131,7 @@ function Game.draw()
     love.graphics.pop()
     Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     Game.drawAmmoHUD()
+    Powerup.drawAlert(GAME_W)
     love.graphics.setCanvas()
 
     -- Escalar el canvas al monitor con letterbox negro

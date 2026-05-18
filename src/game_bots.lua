@@ -60,6 +60,7 @@ function GameBots.load(mapIdx, dificultad)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
+        Powerup.load()
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
@@ -73,6 +74,11 @@ function GameBots.load(mapIdx, dificultad)
 
     if Tank.setWeaponIdx then
         Tank.setWeaponIdx((Perfil.activo and Perfil.activo.weaponIdx) or 1, 1)
+    end
+
+    Powerup.clear()
+    for _, psp in ipairs(Map.getPowerupSpawns()) do
+        Powerup.spawn(psp.type, psp.x, psp.y)
     end
 
     Audio.load(mapIdx or 1)
@@ -115,6 +121,7 @@ function GameBots.update(dt)
 
     Tank.update(dt)
     Bullet.update(dt)
+    Powerup.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
     Bot.update(dt)
@@ -134,6 +141,7 @@ function GameBots.draw()
 
     Map.drawGround()
     Tracks.draw()
+    Powerup.draw()
     Tank.draw()
     Bot.draw()
     Bullet.draw()
@@ -143,6 +151,7 @@ function GameBots.draw()
     love.graphics.pop()
     Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     GameBots.drawHUD()
+    Powerup.drawAlert(GAME_W)
     love.graphics.setCanvas()
 
     local sw, sh = love.graphics.getDimensions()

@@ -75,6 +75,7 @@ function GameOleadas.load(mapIdx, modoJuego)
     if not subsystemsLoaded then
         Tank.load(sp.x, sp.y)
         Bullet.load()
+        Powerup.load()
         Effects.load()
         Tracks.load()
         subsystemsLoaded = true
@@ -97,6 +98,11 @@ function GameOleadas.load(mapIdx, modoJuego)
         controlsAlpha = 0
     else
         showControls = false
+    end
+
+    Powerup.clear()
+    for _, psp in ipairs(Map.getPowerupSpawns()) do
+        Powerup.spawn(psp.type, psp.x, psp.y)
     end
 
     Audio.load(mapIdx or 1)
@@ -148,6 +154,7 @@ function GameOleadas.update(dt)
 
     Tank.update(dt)
     Bullet.update(dt)
+    Powerup.update(dt)
     Effects.update(dt)
     Tracks.update(dt)
     Oleadas.update(dt)
@@ -204,6 +211,7 @@ function GameOleadas.draw()
 
     Map.drawGround()
     Tracks.draw()
+    Powerup.draw()
     Tank.draw()
     Bot.draw()
     Bullet.draw()
@@ -214,6 +222,7 @@ function GameOleadas.draw()
     love.graphics.pop()
     Minimap.drawFogToCurrentCanvas(Camera.x, Camera.y)
     GameOleadas.drawHUD()
+    Powerup.drawAlert(GAME_W)
 
     if showControls then GameOleadas.drawControlsOverlay() end
 
